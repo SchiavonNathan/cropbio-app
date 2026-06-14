@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { FileText, Download, Eye, X, ExternalLink, Pencil, Check, XCircle } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { toast } from 'sonner';
 import './Dashboard.css';
 
 interface PdfMetadata {
@@ -72,9 +73,10 @@ export default function Dashboard() {
       if (selectedPdf?.id === id) {
         setSelectedPdf((prev) => prev ? { ...prev, name: response.data.name } : prev);
       }
+      toast.success('PDF renomeado com sucesso!');
     } catch (error) {
       console.error('Rename error', error);
-      alert('Falha ao renomear. Verifique se você tem permissão de admin.');
+      toast.error('Falha ao renomear. Verifique se você tem permissão de admin.');
     } finally {
       setEditingId(null);
     }

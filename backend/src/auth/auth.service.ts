@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -16,14 +17,17 @@ export class AuthService implements OnModuleInit {
     });
 
     if (!existing) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('admin', salt);
+      
       await this.prisma.user.create({
         data: {
           username: 'admin',
-          password: 'admin',
+          password: hashedPassword,
           role: 'admin',
         },
       });
-      console.log('[AuthService] Usuário admin padrão criado no banco.');
+      console.log('[AuthService] Usuário admin padrão criado no banco com senha criptografada.');
     }
   }
 
@@ -32,14 +36,11 @@ export class AuthService implements OnModuleInit {
     const dbUser = await this.prisma.user.findUnique({ where: { username } });
 
     if (dbUser) {
-      // Valida a senha (texto simples por ora)
-      if (dbUser.password !== pass) return null;
+      // Valida a senha usando bcrypt
+      const isMatch = await bcrypt.compare(pass, dbUser.password);
+      if (!isMatch) return null;
+      
       return { id: dbUser.id, username: dbUser.username, role: dbUser.role };
-    }
-
-    // 2. Fallback mockado: apenas o user padrão
-    if (username === 'user' && pass === 'user') {
-      return { id: 'mock-id-user', username: 'user', role: 'user' };
     }
 
     return null;

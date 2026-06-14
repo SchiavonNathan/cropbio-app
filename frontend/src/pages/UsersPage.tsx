@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Layout from '../components/Layout';
 import {
-  Users, UserPlus, Pencil, Trash2, Check, X,
+  UserPlus, Pencil, Trash2, Check, X,
   ShieldCheck, User, Mail, Phone, BadgeCheck
 } from 'lucide-react';
 import api from '../services/api';
+import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import './UsersPage.css';
 
 interface UserData {
@@ -17,23 +21,41 @@ interface UserData {
   phone?: string;
 }
 
-const EMPTY_FORM = {
-  username: '',
-  password: '',
-  role: 'user',
-  fullName: '',
-  email: '',
-  phone: '',
-};
+const userSchema = z.object({
+  id: z.string().optional(),
+  fullName: z.string().optional(),
+  username: z.string().min(3, 'O login deve ter no mínimo 3 caracteres'),
+  email: z.union([z.literal(''), z.string().email('E-mail inválido')]).optional(),
+  phone: z.string().optional(),
+  password: z.string().optional(),
+  role: z.enum(['admin', 'user']),
+}).refine(data => data.id ? true : !!data.password && data.password.length >= 4, {
+  message: 'A senha é obrigatória (mín. 4 caracteres) para novos usuários',
+  path: ['password'],
+});
+
+type UserFormInputs = z.infer<typeof userSchema> & { id?: string };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<UserFormInputs>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      role: 'user',
+    }
+  });
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -42,64 +64,67 @@ export default function UsersPage() {
       const res = await api.get('/users');
       setUsers(res.data);
     } catch (err) {
-      console.error('Erro ao buscar usuários', err);
+      toast.error('Erro ao buscar usuários');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   const openCreate = () => {
-    setEditingUser(null);
-    setForm(EMPTY_FORM);
+    setEditingUserId(null);
+    reset({ username: '', password: '', role: 'user', fullName: '', email: '', phone: '' });
     setShowForm(true);
   };
 
   const openEdit = (user: UserData) => {
-    setEditingUser(user);
-    setForm({
+    setEditingUserId(user.id);
+    reset({
       username: user.username,
-      password: '',
-      role: user.role,
+      password: '', // Empty password field so it doesn't get updated unless changed
+      role: user.role as 'admin' | 'user',
       fullName: user.fullName || '',
       email: user.email || '',
       phone: user.phone || '',
     });
+    // Manually inject ID for refine validation
+    setValue('id', user.id);
     setShowForm(true);
   };
 
   const closeForm = () => {
     setShowForm(false);
-    setEditingUser(null);
-    setForm(EMPTY_FORM);
+    setEditingUserId(null);
+    reset();
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: UserFormInputs) => {
     setSaving(true);
     try {
-      if (editingUser) {
-        const payload: any = {
-          username: form.username,
-          role: form.role,
-          fullName: form.fullName || null,
-          email: form.email || null,
-          phone: form.phone || null,
-        };
-        if (form.password) payload.password = form.password;
-        const res = await api.patch(`/users/${editingUser.id}`, payload);
-        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? res.data : u)));
+      const payload: any = {
+        username: data.username,
+        role: data.role,
+        fullName: data.fullName || null,
+        email: data.email || null,
+        phone: data.phone || null,
+      };
+      
+      if (data.password) {
+        payload.password = data.password;
+      }
+
+      if (editingUserId) {
+        const res = await api.patch(`/users/${editingUserId}`, payload);
+        setUsers((prev) => prev.map((u) => (u.id === editingUserId ? res.data : u)));
+        toast.success('Usuário atualizado com sucesso!');
       } else {
-        const res = await api.post('/users', {
-          ...form,
-          fullName: form.fullName || null,
-          email: form.email || null,
-          phone: form.phone || null,
-        });
+        const res = await api.post('/users', payload);
         setUsers((prev) => [...prev, res.data]);
+        toast.success('Usuário criado com sucesso!');
       }
       closeForm();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Erro ao salvar usuário.');
+      toast.error(err?.response?.data?.message || 'Erro ao salvar usuário.');
     } finally {
       setSaving(false);
     }
@@ -109,14 +134,13 @@ export default function UsersPage() {
     try {
       await api.delete(`/users/${id}`);
       setUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success('Usuário deletado com sucesso!');
     } catch {
-      alert('Erro ao deletar usuário.');
+      toast.error('Erro ao deletar usuário.');
     } finally {
       setDeleteConfirm(null);
     }
   };
-
-  const f = (v: typeof form) => setForm(v);
 
   return (
     <Layout>
@@ -218,11 +242,11 @@ export default function UsersPage() {
         <div className="modal-overlay animate-fade-in" onClick={closeForm}>
           <div className="modal-box modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+              <h2>{editingUserId ? 'Editar Usuário' : 'Novo Usuário'}</h2>
               <button className="btn btn-ghost icon-btn" onClick={closeForm}><X size={20} /></button>
             </div>
 
-            <form className="modal-form-container" onSubmit={handleSave}>
+            <form className="modal-form-container" onSubmit={handleSubmit(onSubmit)}>
               <div className="modal-body">
                 {/* Seção: Dados Pessoais */}
                 <div className="form-section-title">
@@ -235,21 +259,20 @@ export default function UsersPage() {
                     <input
                       id="u-fullname"
                       type="text"
-                      value={form.fullName}
-                      onChange={(e) => f({ ...form, fullName: e.target.value })}
                       placeholder="João da Silva"
+                      {...register('fullName')}
                     />
+                    {errors.fullName && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.fullName.message}</span>}
                   </div>
                   <div className="input-group">
                     <label htmlFor="u-username">Usuário (login)</label>
                     <input
                       id="u-username"
                       type="text"
-                      required
-                      value={form.username}
-                      onChange={(e) => f({ ...form, username: e.target.value })}
                       placeholder="joao.silva"
+                      {...register('username')}
                     />
+                    {errors.username && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.username.message}</span>}
                   </div>
                 </div>
 
@@ -264,20 +287,20 @@ export default function UsersPage() {
                     <input
                       id="u-email"
                       type="email"
-                      value={form.email}
-                      onChange={(e) => f({ ...form, email: e.target.value })}
                       placeholder="joao@empresa.com"
+                      {...register('email')}
                     />
+                    {errors.email && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.email.message}</span>}
                   </div>
                   <div className="input-group">
                     <label htmlFor="u-phone">Telefone</label>
                     <input
                       id="u-phone"
                       type="tel"
-                      value={form.phone}
-                      onChange={(e) => f({ ...form, phone: e.target.value })}
                       placeholder="(11) 9 9999-0000"
+                      {...register('phone')}
                     />
+                    {errors.phone && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.phone.message}</span>}
                   </div>
                 </div>
 
@@ -290,23 +313,23 @@ export default function UsersPage() {
                   <div className="input-group">
                     <label htmlFor="u-password">
                       Senha{' '}
-                      {editingUser && <span className="label-hint">(vazio = manter atual)</span>}
+                      {editingUserId && <span className="label-hint">(vazio = manter atual)</span>}
                     </label>
                     <input
                       id="u-password"
                       type="password"
-                      required={!editingUser}
-                      value={form.password}
-                      onChange={(e) => f({ ...form, password: e.target.value })}
-                      placeholder={editingUser ? '••••••••' : 'Senha inicial'}
+                      placeholder={editingUserId ? '••••••••' : 'Senha inicial'}
+                      {...register('password')}
                     />
+                    {errors.password && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.password.message}</span>}
                   </div>
                   <div className="input-group">
                     <label htmlFor="u-role">Perfil</label>
-                    <select id="u-role" value={form.role} onChange={(e) => f({ ...form, role: e.target.value })}>
+                    <select id="u-role" {...register('role')}>
                       <option value="user">Usuário</option>
                       <option value="admin">Administrador</option>
                     </select>
+                    {errors.role && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.role.message}</span>}
                   </div>
                 </div>
               </div>
@@ -314,7 +337,7 @@ export default function UsersPage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={closeForm}>Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Salvando...' : editingUser ? 'Salvar Alterações' : 'Criar Usuário'}
+                  {saving ? 'Salvando...' : editingUserId ? 'Salvar Alterações' : 'Criar Usuário'}
                 </button>
               </div>
             </form>

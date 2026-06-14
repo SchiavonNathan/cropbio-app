@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import { UploadCloud, File, X } from 'lucide-react';
 import api from '../services/api';
+import { toast } from 'sonner';
 import './Admin.css';
 
 export default function Admin() {
@@ -27,11 +28,11 @@ export default function Admin() {
       await api.post('/pdfs', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      alert('Upload realizado com sucesso!');
+      toast.success('Upload realizado com sucesso!');
       setSelectedFile(null);
     } catch (error) {
       console.error('Upload error', error);
-      alert('Falha ao fazer o upload. Você tem permissão de Admin?');
+      toast.error('Falha ao fazer o upload. Você tem permissão de Admin?');
     } finally {
       setUploading(false);
     }

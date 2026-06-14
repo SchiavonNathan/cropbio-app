@@ -1,16 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-
-type CreateUserDto = {
-  username: string;
-  password: string;
-  role: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-};
-
-type UpdateUserDto = Partial<CreateUserDto>;
+import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 const USER_SELECT = {
   id: true,
@@ -32,17 +24,29 @@ export class UsersService {
     });
   }
 
-  create(data: CreateUserDto) {
+  async create(data: CreateUserDto) {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(data.password, salt);
+
     return this.prisma.user.create({
-      data,
+      data: {
+        ...data,
+        password: hashedPassword,
+      },
       select: USER_SELECT,
     });
   }
 
-  update(id: string, data: UpdateUserDto) {
+  async update(id: string, data: UpdateUserDto) {
+    const updateData: any = { ...data };
+    if (data.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(data.password, salt);
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: updateData,
       select: USER_SELECT,
     });
   }

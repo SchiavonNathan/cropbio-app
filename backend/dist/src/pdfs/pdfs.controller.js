@@ -89,11 +89,12 @@ let PdfsController = class PdfsController {
     async uploadPdf(file) {
         const fileBuffer = fs.readFileSync(file.path);
         const hash = (0, crypto_1.createHash)('md5').update(fileBuffer).digest('hex');
+        const port = process.env.PORT ?? 3000;
         const pdf = await this.prisma.pdf.create({
             data: {
                 name: file.originalname,
                 hash,
-                url: `http://localhost:3000/pdfs/download/${file.filename}`
+                url: `http://localhost:${port}/pdfs/download/${file.filename}`
             }
         });
         return { message: 'Upload concluído', pdf };
