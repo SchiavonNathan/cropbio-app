@@ -3,3 +3,7 @@ node_modules
 .env
 /uploads/*
 /generated/prisma
+
+dev.db
+dist/
+*.db
