@@ -43,7 +43,7 @@ export class PdfsController {
       }
     })
   }))
-  async uploadPdf(@UploadedFile() file: Express.Multer.File) {
+  async uploadPdf(@UploadedFile() file: Express.Multer.File, @Body('category') category: string) {
     const fileBuffer = fs.readFileSync(file.path);
     const hash = createHash('md5').update(fileBuffer).digest('hex');
 
@@ -53,7 +53,8 @@ export class PdfsController {
       data: {
         name: file.originalname,
         hash,
-        url: `http://localhost:${port}/pdfs/download/${file.filename}`
+        url: `/pdfs/download/${file.filename}`,
+        category: category || "Produtos e tabelas"
       }
     });
 
@@ -69,7 +70,8 @@ export class PdfsController {
       id: pdf.id,
       name: pdf.name,
       hash: pdf.hash,
-      url_download: pdf.url
+      url_download: pdf.url,
+      category: pdf.category
     }));
   }
 
@@ -80,7 +82,7 @@ export class PdfsController {
       where: { id },
       data: { name: body.name },
     });
-    return { id: pdf.id, name: pdf.name, hash: pdf.hash, url_download: pdf.url };
+    return { id: pdf.id, name: pdf.name, hash: pdf.hash, url_download: pdf.url, category: pdf.category };
   }
 
   @Delete(':id')

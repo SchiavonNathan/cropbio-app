@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Layout from '../components/Layout';
 import {
   UserPlus, Pencil, Trash2, Check, X,
-  ShieldCheck, User, Mail, Phone, BadgeCheck
+  ShieldCheck, User, Mail, Phone, BadgeCheck, Search
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'sonner';
@@ -29,8 +29,8 @@ const userSchema = z.object({
   phone: z.string().optional(),
   password: z.string().optional(),
   role: z.enum(['admin', 'user']),
-}).refine(data => data.id ? true : !!data.password && data.password.length >= 4, {
-  message: 'A senha é obrigatória (mín. 4 caracteres) para novos usuários',
+}).refine((data) => data.id ? true : !!data.password && data.password.length >= 4, {
+  message: 'Senha obrigatória (mín. 4 caracteres) para novos usuários',
   path: ['password'],
 });
 
@@ -39,6 +39,7 @@ type UserFormInputs = z.infer<typeof userSchema> & { id?: string };
 export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,9 +53,7 @@ export default function UsersPage() {
     formState: { errors },
   } = useForm<UserFormInputs>({
     resolver: zodResolver(userSchema),
-    defaultValues: {
-      role: 'user',
-    }
+    defaultValues: { role: 'user' },
   });
 
   useEffect(() => { fetchUsers(); }, []);
@@ -63,13 +62,22 @@ export default function UsersPage() {
     try {
       const res = await api.get('/users');
       setUsers(res.data);
-    } catch (err) {
-      toast.error('Erro ao buscar usuários');
-      console.error(err);
+    } catch {
+      toast.error('Erro ao buscar usuários.');
     } finally {
       setLoading(false);
     }
   };
+
+  const filteredUsers = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return users;
+    return users.filter((u) =>
+      (u.fullName || '').toLowerCase().includes(q) ||
+      u.username.toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q)
+    );
+  }, [users, search]);
 
   const openCreate = () => {
     setEditingUserId(null);
@@ -81,13 +89,12 @@ export default function UsersPage() {
     setEditingUserId(user.id);
     reset({
       username: user.username,
-      password: '', // Empty password field so it doesn't get updated unless changed
+      password: '',
       role: user.role as 'admin' | 'user',
       fullName: user.fullName || '',
       email: user.email || '',
       phone: user.phone || '',
     });
-    // Manually inject ID for refine validation
     setValue('id', user.id);
     setShowForm(true);
   };
@@ -108,15 +115,12 @@ export default function UsersPage() {
         email: data.email || null,
         phone: data.phone || null,
       };
-      
-      if (data.password) {
-        payload.password = data.password;
-      }
+      if (data.password) payload.password = data.password;
 
       if (editingUserId) {
         const res = await api.patch(`/users/${editingUserId}`, payload);
-        setUsers((prev) => prev.map((u) => (u.id === editingUserId ? res.data : u)));
-        toast.success('Usuário atualizado com sucesso!');
+        setUsers((prev) => prev.map((u) => u.id === editingUserId ? res.data : u));
+        toast.success('Usuário atualizado!');
       } else {
         const res = await api.post('/users', payload);
         setUsers((prev) => [...prev, res.data]);
@@ -134,7 +138,7 @@ export default function UsersPage() {
     try {
       await api.delete(`/users/${id}`);
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      toast.success('Usuário deletado com sucesso!');
+      toast.success('Usuário removido.');
     } catch {
       toast.error('Erro ao deletar usuário.');
     } finally {
@@ -145,25 +149,34 @@ export default function UsersPage() {
   return (
     <Layout>
       <div className="page-header animate-fade-in">
-        <div className="page-header-row">
-          <div>
-            <h1>Usuários</h1>
-            <p>Gerencie os usuários do sistema.</p>
-          </div>
-          <button className="btn btn-primary" onClick={openCreate}>
-            <UserPlus size={18} />
-            Novo Usuário
-          </button>
+        <h1>Usuários</h1>
+        <p>Gerencie os acessos ao sistema.</p>
+      </div>
+
+      <div className="users-toolbar animate-fade-in">
+        <div className="search-wrapper">
+          <span className="search-icon"><Search size={16} /></span>
+          <input
+            type="search"
+            placeholder="Buscar por nome, usuário ou e-mail..."
+            className="search-input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+        <button className="btn btn-primary" onClick={openCreate}>
+          <UserPlus size={17} />
+          Novo Usuário
+        </button>
       </div>
 
       {loading ? (
         <div className="loading-state">
-          <div className="loading-spinner" />
-          Carregando usuários...
+          <div className="spinner spinner-lg" />
+          <span>Carregando usuários...</span>
         </div>
       ) : (
-        <div className="users-table-wrapper glass-panel animate-fade-in">
+        <div className="card users-table-wrapper animate-fade-in">
           <table className="users-table">
             <thead>
               <tr>
@@ -174,9 +187,13 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 ? (
-                <tr><td colSpan={4} className="table-empty">Nenhum usuário cadastrado.</td></tr>
-              ) : users.map((user) => (
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="table-empty-cell">
+                    {search ? 'Nenhum resultado encontrado.' : 'Nenhum usuário cadastrado.'}
+                  </td>
+                </tr>
+              ) : filteredUsers.map((user) => (
                 <tr key={user.id} className="user-row">
                   <td>
                     <div className="user-cell">
@@ -193,13 +210,13 @@ export default function UsersPage() {
                     <div className="contact-cell">
                       {user.email && (
                         <span className="contact-item">
-                          <Mail size={13} />
+                          <Mail size={12} />
                           {user.email}
                         </span>
                       )}
                       {user.phone && (
                         <span className="contact-item">
-                          <Phone size={13} />
+                          <Phone size={12} />
                           {user.phone}
                         </span>
                       )}
@@ -209,24 +226,44 @@ export default function UsersPage() {
                   <td>
                     <span className={`role-badge ${user.role}`}>
                       {user.role === 'admin'
-                        ? <><ShieldCheck size={13} /> Administrador</>
-                        : <><User size={13} /> Usuário</>}
+                        ? <><ShieldCheck size={12} /> Administrador</>
+                        : <><User size={12} /> Usuário</>
+                      }
                     </span>
                   </td>
                   <td>
                     <div className="row-actions">
-                      <button className="btn btn-ghost icon-btn" title="Editar" onClick={() => openEdit(user)}>
-                        <Pencil size={16} />
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm"
+                        title="Editar"
+                        onClick={() => openEdit(user)}
+                      >
+                        <Pencil size={15} />
                       </button>
+
                       {deleteConfirm === user.id ? (
-                        <div className="delete-confirm">
+                        <div className="delete-confirm-inline">
                           <span>Confirmar?</span>
-                          <button className="btn btn-danger icon-btn" onClick={() => handleDelete(user.id)}><Check size={16} /></button>
-                          <button className="btn btn-ghost icon-btn" onClick={() => setDeleteConfirm(null)}><X size={16} /></button>
+                          <button
+                            className="btn btn-danger btn-icon btn-sm"
+                            onClick={() => handleDelete(user.id)}
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-icon btn-sm"
+                            onClick={() => setDeleteConfirm(null)}
+                          >
+                            <X size={14} />
+                          </button>
                         </div>
                       ) : (
-                        <button className="btn btn-ghost icon-btn danger" title="Deletar" onClick={() => setDeleteConfirm(user.id)}>
-                          <Trash2 size={16} />
+                        <button
+                          className="btn btn-ghost btn-icon btn-sm btn-row-danger"
+                          title="Remover"
+                          onClick={() => setDeleteConfirm(user.id)}
+                        >
+                          <Trash2 size={15} />
                         </button>
                       )}
                     </div>
@@ -239,74 +276,52 @@ export default function UsersPage() {
       )}
 
       {showForm && createPortal(
-        <div className="modal-overlay animate-fade-in" onClick={closeForm}>
+        <div className="modal-overlay" onClick={closeForm}>
           <div className="modal-box modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingUserId ? 'Editar Usuário' : 'Novo Usuário'}</h2>
-              <button className="btn btn-ghost icon-btn" onClick={closeForm}><X size={20} /></button>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={closeForm}>
+                <X size={18} />
+              </button>
             </div>
 
             <form className="modal-form-container" onSubmit={handleSubmit(onSubmit)}>
               <div className="modal-body">
-                {/* Seção: Dados Pessoais */}
                 <div className="form-section-title">
-                  <BadgeCheck size={15} />
+                  <BadgeCheck size={14} />
                   Dados Pessoais
                 </div>
                 <div className="form-grid-2">
                   <div className="input-group">
                     <label htmlFor="u-fullname">Nome Completo</label>
-                    <input
-                      id="u-fullname"
-                      type="text"
-                      placeholder="João da Silva"
-                      {...register('fullName')}
-                    />
-                    {errors.fullName && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.fullName.message}</span>}
+                    <input id="u-fullname" type="text" placeholder="João da Silva" {...register('fullName')} />
+                    {errors.fullName && <span className="error-msg">{errors.fullName.message}</span>}
                   </div>
                   <div className="input-group">
-                    <label htmlFor="u-username">Usuário (login)</label>
-                    <input
-                      id="u-username"
-                      type="text"
-                      placeholder="joao.silva"
-                      {...register('username')}
-                    />
-                    {errors.username && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.username.message}</span>}
+                    <label htmlFor="u-username">Login</label>
+                    <input id="u-username" type="text" placeholder="joao.silva" {...register('username')} />
+                    {errors.username && <span className="error-msg">{errors.username.message}</span>}
                   </div>
                 </div>
 
-                {/* Seção: Contato */}
                 <div className="form-section-title">
-                  <Mail size={15} />
+                  <Mail size={14} />
                   Contato
                 </div>
                 <div className="form-grid-2">
                   <div className="input-group">
                     <label htmlFor="u-email">E-mail</label>
-                    <input
-                      id="u-email"
-                      type="email"
-                      placeholder="joao@empresa.com"
-                      {...register('email')}
-                    />
-                    {errors.email && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.email.message}</span>}
+                    <input id="u-email" type="email" placeholder="joao@empresa.com" {...register('email')} />
+                    {errors.email && <span className="error-msg">{errors.email.message}</span>}
                   </div>
                   <div className="input-group">
                     <label htmlFor="u-phone">Telefone</label>
-                    <input
-                      id="u-phone"
-                      type="tel"
-                      placeholder="(11) 9 9999-0000"
-                      {...register('phone')}
-                    />
-                    {errors.phone && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.phone.message}</span>}
+                    <input id="u-phone" type="tel" placeholder="(11) 9 9999-0000" {...register('phone')} />
                   </div>
                 </div>
 
-                {/* Seção: Acesso */}
                 <div className="form-section-title">
-                  <ShieldCheck size={15} />
+                  <ShieldCheck size={14} />
                   Acesso
                 </div>
                 <div className="form-grid-2">
@@ -321,7 +336,7 @@ export default function UsersPage() {
                       placeholder={editingUserId ? '••••••••' : 'Senha inicial'}
                       {...register('password')}
                     />
-                    {errors.password && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.password.message}</span>}
+                    {errors.password && <span className="error-msg">{errors.password.message}</span>}
                   </div>
                   <div className="input-group">
                     <label htmlFor="u-role">Perfil</label>
@@ -329,15 +344,18 @@ export default function UsersPage() {
                       <option value="user">Usuário</option>
                       <option value="admin">Administrador</option>
                     </select>
-                    {errors.role && <span className="error-text" style={{ color: 'red', fontSize: '0.8rem', marginTop: '4px' }}>{errors.role.message}</span>}
                   </div>
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={closeForm}>Cancelar</button>
+                <button type="button" className="btn btn-ghost" onClick={closeForm}>
+                  Cancelar
+                </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Salvando...' : editingUserId ? 'Salvar Alterações' : 'Criar Usuário'}
+                  {saving ? (
+                    <><span className="spinner" /> Salvando...</>
+                  ) : editingUserId ? 'Salvar Alterações' : 'Criar Usuário'}
                 </button>
               </div>
             </form>

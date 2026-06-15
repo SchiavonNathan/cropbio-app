@@ -1,112 +1,167 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, LayoutDashboard, Settings, Users, Menu, X } from 'lucide-react';
+import {
+  Home, FileSpreadsheet, BookOpen, Award, FileText,
+  Settings, Users, LogOut, Menu, X, Leaf
+} from 'lucide-react';
 import './Layout.css';
+
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}
+
+function NavItem({ icon, label, active, onClick }: NavItemProps) {
+  return (
+    <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
+      {icon}
+      {label}
+    </button>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // Close mobile menu on route change
   useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
+    setMobileOpen(false);
+  }, [location.pathname, searchParams]);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-  }, [mobileMenuOpen]);
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  const isActive = (path: string, cat?: string) => {
+    if (cat) return location.pathname === path && category === cat;
+    if (path === '/dashboard') return location.pathname === path && !category;
+    return location.pathname === path;
+  };
+
+  const avatarInitial = (user?.fullName || user?.username || '?').charAt(0).toUpperCase();
 
   return (
-    <div className="layout-container">
-      {/* Mobile Top Bar */}
-      <div className="mobile-topbar glass-panel">
-        <div className="sidebar-brand">
-          <h2>PDF Hub</h2>
-        </div>
-        <button 
-          className="btn btn-ghost icon-btn mobile-menu-btn" 
-          onClick={() => setMobileMenuOpen(true)}
-        >
-          <Menu size={24} />
+    <div className="layout-root">
+      {/* Mobile Topbar */}
+      <header className="topbar">
+        <button className="topbar-menu-btn" onClick={() => setMobileOpen(true)}>
+          <Menu size={22} />
         </button>
-      </div>
+        <div className="topbar-brand">
+          <h2>Vitalforce</h2>
+        </div>
+        <div style={{ width: 38 }} />
+      </header>
 
-      {/* Mobile Overlay */}
-      {mobileMenuOpen && (
-        <div className="mobile-overlay animate-fade-in" onClick={() => setMobileMenuOpen(false)} />
+      {/* Sidebar Overlay (mobile) */}
+      {mobileOpen && (
+        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`glass-panel sidebar ${mobileMenuOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-brand">
-            <h2>PDF Hub</h2>
+      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-icon">
+            <Leaf size={18} />
           </div>
-          <button 
-            className="btn btn-ghost icon-btn mobile-close-btn" 
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <X size={24} />
+          <div className="sidebar-brand-text">
+            <h2>Vitalforce</h2>
+          </div>
+          <button className="mobile-close-btn" onClick={() => setMobileOpen(false)}>
+            <X size={20} />
           </button>
         </div>
-        
+
+        {/* Nav */}
         <nav className="sidebar-nav">
-          <button 
-            className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+          <span className="nav-section-label">Principal</span>
+          <NavItem
+            icon={<Home size={18} />}
+            label="Início"
+            active={isActive('/dashboard')}
             onClick={() => navigate('/dashboard')}
-          >
-            <LayoutDashboard size={20} />
-            Dashboard
-          </button>
-          
-          {user?.role === 'admin' && (
+          />
+
+          <div className="nav-divider" />
+
+          <span className="nav-section-label">Conteúdo</span>
+          <NavItem
+            icon={<FileSpreadsheet size={18} />}
+            label="Produtos e Tabelas"
+            active={isActive('/dashboard', 'Produtos e tabelas')}
+            onClick={() => navigate('/dashboard?category=Produtos e tabelas')}
+          />
+          <NavItem
+            icon={<BookOpen size={18} />}
+            label="Culturas"
+            active={isActive('/dashboard', 'Culturas')}
+            onClick={() => navigate('/dashboard?category=Culturas')}
+          />
+          <NavItem
+            icon={<Award size={18} />}
+            label="Resultados"
+            active={isActive('/dashboard', 'Resultados')}
+            onClick={() => navigate('/dashboard?category=Resultados')}
+          />
+          <NavItem
+            icon={<FileText size={18} />}
+            label="Palestras"
+            active={isActive('/dashboard', 'Palestras')}
+            onClick={() => navigate('/dashboard?category=Palestras')}
+          />
+
+          {isAdmin && (
             <>
-              <button 
-                className={`nav-item ${location.pathname === '/admin' ? 'active' : ''}`}
+              <div className="nav-divider" />
+              <span className="nav-section-label">Administração</span>
+              <NavItem
+                icon={<Settings size={18} />}
+                label="Upload de PDFs"
+                active={isActive('/admin')}
                 onClick={() => navigate('/admin')}
-              >
-                <Settings size={20} />
-                Administração
-              </button>
-              <button 
-                className={`nav-item ${location.pathname === '/users' ? 'active' : ''}`}
+              />
+              <NavItem
+                icon={<Users size={18} />}
+                label="Usuários"
+                active={isActive('/users')}
                 onClick={() => navigate('/users')}
-              >
-                <Users size={20} />
-                Usuários
-              </button>
+              />
             </>
           )}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">{(user?.fullName || user?.username || '?').charAt(0).toUpperCase()}</div>
-            <div className="user-details">
-              <span className="user-name">{user?.fullName || user?.username}</span>
-              <span className="user-role">{user?.role === 'admin' ? 'Administrador' : 'Usuário'}</span>
+        {/* Profile */}
+        <div className="sidebar-profile">
+          <div className="sidebar-profile-inner">
+            <div className="sidebar-avatar">{avatarInitial}</div>
+            <div className="sidebar-profile-info">
+              <span className="sidebar-profile-name">{user?.fullName || user?.username}</span>
+              <span className="sidebar-profile-role">{user?.role === 'admin' ? 'Administrador' : 'Usuário'}</span>
             </div>
+            <button className="sidebar-logout-btn" onClick={handleLogout} title="Sair">
+              <LogOut size={16} />
+            </button>
           </div>
-          <button onClick={handleLogout} className="logout-btn">
-            <LogOut size={18} />
-            Sair
-          </button>
         </div>
       </aside>
 
+      {/* Main */}
       <main className="main-content animate-fade-in">
         {children}
       </main>

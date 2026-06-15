@@ -86,7 +86,7 @@ let PdfsController = class PdfsController {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async uploadPdf(file) {
+    async uploadPdf(file, category) {
         const fileBuffer = fs.readFileSync(file.path);
         const hash = (0, crypto_1.createHash)('md5').update(fileBuffer).digest('hex');
         const port = process.env.PORT ?? 3000;
@@ -94,7 +94,8 @@ let PdfsController = class PdfsController {
             data: {
                 name: file.originalname,
                 hash,
-                url: `http://localhost:${port}/pdfs/download/${file.filename}`
+                url: `/pdfs/download/${file.filename}`,
+                category: category || "Produtos e tabelas"
             }
         });
         return { message: 'Upload concluído', pdf };
@@ -107,7 +108,8 @@ let PdfsController = class PdfsController {
             id: pdf.id,
             name: pdf.name,
             hash: pdf.hash,
-            url_download: pdf.url
+            url_download: pdf.url,
+            category: pdf.category
         }));
     }
     async renamePdf(id, body) {
@@ -115,7 +117,7 @@ let PdfsController = class PdfsController {
             where: { id },
             data: { name: body.name },
         });
-        return { id: pdf.id, name: pdf.name, hash: pdf.hash, url_download: pdf.url };
+        return { id: pdf.id, name: pdf.name, hash: pdf.hash, url_download: pdf.url, category: pdf.category };
     }
     async deletePdf(id) {
         const pdf = await this.prisma.pdf.findUnique({ where: { id } });
@@ -144,8 +146,9 @@ __decorate([
         })
     })),
     __param(0, (0, common_1.UploadedFile)()),
+    __param(1, (0, common_1.Body)('category')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], PdfsController.prototype, "uploadPdf", null);
 __decorate([

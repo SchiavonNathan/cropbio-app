@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, SectionList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { getLocalPdfs } from '../database/schema';
 import { syncPdfs, startNetworkListener } from '../sync/syncService';
 import { useAuthStore } from '../store/authStore';
 import { FileText, LogOut, RefreshCw } from 'lucide-react-native';
+
+const CATEGORIES = [
+  'Produtos e tabelas',
+  'Culturas',
+  'Resultados',
+  'Palestras'
+];
 
 export default function DashboardScreen({ navigation }: any) {
   const [pdfs, setPdfs] = useState<any[]>([]);
@@ -14,12 +21,10 @@ export default function DashboardScreen({ navigation }: any) {
 
   useEffect(() => {
     loadPdfs();
-    // Start background network listener to sync silently
     const unsubscribe = startNetworkListener(() => {
       loadPdfs();
     });
     
-    // Initial sync
     handleSync();
 
     return () => {
@@ -58,56 +63,62 @@ export default function DashboardScreen({ navigation }: any) {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.card} onPress={() => openPdf(item)}>
       <View style={styles.cardIcon}>
-        <FileText color="#6366f1" size={32} />
+        <FileText color="#0A422D" size={32} />
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.pdfTitle} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.pdfMeta}>MD5: {item.hash.substring(0, 10)}...</Text>
         <Text style={styles.pdfStatus}>{item.localUri ? 'Disponível Offline' : 'Apenas Online'}</Text>
       </View>
     </TouchableOpacity>
   );
 
+  const sections = CATEGORIES.map(cat => ({
+    title: cat,
+    data: pdfs.filter(p => (p.category || 'Produtos e tabelas') === cat)
+  })).filter(section => section.data.length > 0);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcome}>Olá, {user?.username}</Text>
-          <Text style={styles.subtitle}>Seus PDFs (Offline-First)</Text>
+          <Text style={styles.welcome}>Vitalforce</Text>
+          <Text style={styles.subtitle}>Olá, {user?.username}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleSync} style={styles.actionBtn}>
-            <RefreshCw size={24} color={syncing ? '#94a3b8' : '#1e293b'} />
+            <RefreshCw size={24} color={syncing ? '#94a3b8' : '#ffffff'} />
           </TouchableOpacity>
           <TouchableOpacity onPress={logout} style={styles.actionBtn}>
-            <LogOut size={24} color="#ef4444" />
+            <LogOut size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </View>
 
       {syncing && (
         <View style={styles.syncBanner}>
-          <ActivityIndicator size="small" color="#6366f1" />
+          <ActivityIndicator size="small" color="#0A422D" />
           <Text style={styles.syncText}>Sincronizando com o servidor...</Text>
         </View>
       )}
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color="#0A422D" />
         </View>
       ) : (
-        <FlatList
-          data={pdfs}
+        <SectionList
+          sections={sections}
           keyExtractor={item => item.id}
           renderItem={renderItem}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.center}>
               <FileText size={48} color="#cbd5e1" />
-              <Text style={styles.emptyText}>Nenhum PDF encontrado localmente.</Text>
-              <Text style={styles.emptySub}>Puxe para atualizar a sincronização.</Text>
+              <Text style={styles.emptyText}>Nenhum documento encontrado.</Text>
             </View>
           }
         />
@@ -119,29 +130,30 @@ export default function DashboardScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#e5e7eb',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#0A422D',
     paddingTop: 60,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   welcome: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#ffffff',
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#d1d5db',
+    marginTop: 4,
   },
   headerActions: {
     flexDirection: 'row',
@@ -154,17 +166,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e0e7ff',
+    backgroundColor: '#f3f4f6',
     padding: 8,
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d1d5db',
   },
   syncText: {
-    color: '#4338ca',
+    color: '#0A422D',
     fontSize: 12,
     fontWeight: 'bold',
   },
   list: {
     padding: 16,
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0A422D',
+    marginTop: 16,
+    marginBottom: 8,
+    backgroundColor: '#e5e7eb',
+    paddingVertical: 4,
   },
   card: {
     flexDirection: 'row',
@@ -183,7 +207,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#e0e7ff',
+    backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -194,35 +218,25 @@ const styles = StyleSheet.create({
   pdfTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#1f2937',
     marginBottom: 4,
-  },
-  pdfMeta: {
-    fontSize: 12,
-    color: '#64748b',
   },
   pdfStatus: {
     fontSize: 12,
     color: '#10b981',
     fontWeight: 'bold',
-    marginTop: 4,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    marginTop: 100,
+    marginTop: 60,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#475569',
+    color: '#4b5563',
     marginTop: 16,
-  },
-  emptySub: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 8,
   },
 });

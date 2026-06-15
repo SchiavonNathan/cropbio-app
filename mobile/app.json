@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Vitalforce",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "primaryColor": "#0A422D",
     "ios": {
       "supportsTablet": true
     },

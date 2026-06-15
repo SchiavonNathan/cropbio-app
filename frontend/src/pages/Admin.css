@@ -1,110 +1,188 @@
-.admin-content {
-  max-width: 600px;
+/* ================================================
+   ADMIN PAGE
+   ================================================ */
+.admin-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
 }
 
+/* Upload Card */
 .upload-card {
   padding: 32px;
 }
 
-.upload-card h2 {
-  font-size: 1.5rem;
-  margin-bottom: 8px;
+.upload-card-header {
+  margin-bottom: 28px;
 }
 
-.upload-subtitle {
+.upload-card-header h2 {
+  font-size: 1.25rem;
+  margin-bottom: 4px;
+}
+
+.upload-card-header p {
+  font-size: 0.9rem;
   color: var(--text-muted);
-  margin-bottom: 32px;
 }
 
+/* Dropzone */
 .upload-dropzone {
-  border: 2px dashed rgba(59, 130, 246, 0.3);
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.4);
-  padding: 40px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  padding: 48px 32px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all var(--transition-slow);
+  cursor: pointer;
   position: relative;
-  margin-bottom: 24px;
+  margin: 24px 0;
 }
 
-.upload-dropzone:hover {
-  border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .file-input-hidden {
   display: none;
 }
 
-.dropzone-content {
-  cursor: pointer;
+.dropzone-label {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
 }
 
-.dropzone-content h3 {
-  color: var(--text-main);
-  font-size: 1.1rem;
+.dropzone-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.dropzone-content p {
+.dropzone-label h3 {
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.dropzone-label p {
+  font-size: 0.85rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
 }
 
-.selected-file {
+/* Selected file preview */
+.file-preview {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 16px;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1.5px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
 }
 
-.file-icon {
-  background: rgba(139, 92, 246, 0.1);
-  padding: 12px;
-  border-radius: 12px;
-}
-
-.file-details {
-  flex: 1;
-  text-align: left;
+.file-preview-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-subtle);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.file-name {
-  font-weight: 500;
-  margin-bottom: 4px;
+.file-preview-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.file-size {
+.file-preview-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-preview-size {
   font-size: 0.8rem;
   color: var(--text-muted);
+  margin-top: 2px;
 }
 
-.remove-file-btn {
+.file-preview-remove {
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
+  padding: 6px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--transition);
 }
 
-.remove-file-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
+.file-preview-remove:hover {
   color: var(--danger);
+  background: var(--danger-subtle);
 }
 
-.form-actions {
+.upload-form-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* Tips Card */
+.tips-card {
+  padding: 24px;
+}
+
+.tips-card h3 {
+  font-size: 1rem;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.tip-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.tip-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
 }
