@@ -1,61 +1,97 @@
-import * as FileSystem from 'expo-file-system';
-import * as SQLite from 'expo-sqlite';
 import NetInfo from '@react-native-community/netinfo';
-// Simulate an API call
-import { api } from '../services/api'; 
+import * as FileSystem from 'expo-file-system/legacy';
+import api from '../services/api';
+import { getLocalPdfs, insertOrUpdatePdf, deletePdf } from '../database/schema';
 
-const db = SQLite.openDatabaseSync('pdfs.db');
+interface ApiPdf {
+  id: string;
+  name: string;
+  hash: string;
+  url_download: string;
+}
 
-export const setupDatabase = () => {
-  db.execSync(
-    'CREATE TABLE IF NOT EXISTS pdfs (id TEXT PRIMARY KEY, name TEXT, hash TEXT, localUri TEXT);'
-  );
-};
-
-export const syncPdfs = async () => {
-  const netInfo = await NetInfo.fetch();
-  if (!netInfo.isConnected) return; // Silent skip if offline
+export async function syncPdfs() {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) {
+    console.log('[SyncService] Offline. Skipping sync.');
+    return;
+  }
 
   try {
-    // Fetch remote metadata
-    const response = await api.get('/pdfs');
-    const remotePdfs: any[] = response.data;
-
-    // Get local metadata
-    const localPdfs = db.getAllSync('SELECT * FROM pdfs') as any[];
-
-    for (const remote of remotePdfs) {
-      const local = localPdfs.find((p) => p.id === remote.id);
-
-      // If new or updated hash
-      if (!local || local.hash !== remote.hash) {
-        const fileUri = `${FileSystem.documentDirectory}${remote.id}.pdf`;
-        
-        // Download file silently in background
-        const downloadRes = await FileSystem.downloadAsync(
-          remote.url_download,
-          fileUri
-        );
-
-        // Upsert DB
-        db.runSync(
-          'INSERT OR REPLACE INTO pdfs (id, name, hash, localUri) VALUES (?, ?, ?, ?)',
-          [remote.id, remote.name, remote.hash, downloadRes.uri]
-        );
+    console.log('[SyncService] Online. Starting sync...');
+    const response = await api.get<ApiPdf[]>('/pdfs');
+    const remotePdfs = response.data;
+    
+    // Using typing from generic SQLite return
+    const localPdfs: any[] = await getLocalPdfs();
+    
+    // 1. Apagar do SQLite e FileSystem os PDFs que não existem mais no remoto
+    const remoteIds = remotePdfs.map(r => r.id);
+    for (const local of localPdfs) {
+      if (!remoteIds.includes(local.id)) {
+        console.log(`[SyncService] Apagando PDF removido: ${local.name}`);
+        if (local.localUri) {
+          try {
+            await FileSystem.deleteAsync(local.localUri, { idempotent: true });
+          } catch (e) {
+             console.error('Error deleting file', e);
+          }
+        }
+        await deletePdf(local.id);
       }
     }
 
-    // Optional: Check localPdfs that are not in remotePdfs and delete them
+    // 2. Fazer download de arquivos novos ou modificados
+    for (const remote of remotePdfs) {
+      const localMatch = localPdfs.find(l => l.id === remote.id);
+      
+      // Se não existir localmente ou o hash for diferente (foi alterado)
+      if (!localMatch || localMatch.hash !== remote.hash) {
+        console.log(`[SyncService] Baixando PDF: ${remote.name}`);
+        const fileUri = `${FileSystem.documentDirectory}${remote.id}.pdf`;
+        
+        try {
+          const baseUrl = api.defaults.baseURL || 'http://192.168.200.103:3000';
+          let downloadUrl = remote.url_download;
+          if (downloadUrl.startsWith('/')) {
+            downloadUrl = `${baseUrl}${downloadUrl}`;
+          } else if (downloadUrl.includes('localhost')) {
+            downloadUrl = downloadUrl.replace(/http:\/\/localhost:\d+/, baseUrl);
+          }
 
-  } catch (error) {
-    console.error('Sync Error:', error);
+          const downloadRes = await FileSystem.downloadAsync(
+            downloadUrl,
+            fileUri
+          );
+          
+          if (downloadRes.status === 200) {
+            await insertOrUpdatePdf({
+              id: remote.id,
+              name: remote.name,
+              hash: remote.hash,
+              url: remote.url_download,
+              localUri: downloadRes.uri
+            });
+            console.log(`[SyncService] Sucesso: ${remote.name}`);
+          }
+        } catch (downloadErr) {
+          console.error(`[SyncService] Falha no download de ${remote.name}`, downloadErr);
+        }
+      }
+    }
+    console.log('[SyncService] Sync Finalizado.');
+  } catch (err) {
+    console.error('[SyncService] Falha de comunicação com API', err);
   }
-};
+}
 
-export const startSyncListener = () => {
-  NetInfo.addEventListener(state => {
-    if (state.isConnected) {
-      syncPdfs();
+// Inicia o listener de rede que dispara a sincronização silenciosa
+export function startNetworkListener(onSyncEnd?: () => void) {
+  return NetInfo.addEventListener(state => {
+    if (state.isConnected && state.isInternetReachable) {
+      syncPdfs().then(() => {
+        if (onSyncEnd) onSyncEnd();
+      });
     }
   });
-};
+}
