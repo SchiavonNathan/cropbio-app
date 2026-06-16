@@ -5,7 +5,7 @@ import Layout from '../components/Layout';
 import {
   FileText, Download, Eye, X, ExternalLink, Pencil,
   Check, XCircle, ChevronRight, FileSpreadsheet,
-  BookOpen, Award, ArrowLeft
+  BookOpen, Award, ArrowLeft, Trash2, AlertTriangle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -34,6 +34,8 @@ export default function Dashboard() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
@@ -96,6 +98,22 @@ export default function Dashboard() {
   const openViewer = (pdf: PdfMetadata) => {
     if (editingId) return;
     setSelectedPdf(pdf);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/pdfs/${confirmDeleteId}`);
+      setPdfs((prev) => prev.filter((p) => p.id !== confirmDeleteId));
+      if (selectedPdf?.id === confirmDeleteId) setSelectedPdf(null);
+      toast.success('PDF excluído com sucesso!');
+    } catch {
+      toast.error('Erro ao excluir o PDF.');
+    } finally {
+      setDeleting(false);
+      setConfirmDeleteId(null);
+    }
   };
 
   const filteredPdfs = categoryParam
@@ -215,6 +233,15 @@ export default function Dashboard() {
                       <Pencil size={16} />
                     </button>
                   )}
+                  {isAdmin && (
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm btn-danger"
+                      title="Excluir"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(pdf.id); }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                   <a
                     href={pdf.url_download}
                     download
@@ -253,6 +280,35 @@ export default function Dashboard() {
             </div>
             <div className="pdf-modal-body">
               <iframe src={selectedPdf.url_download} title={selectedPdf.name} className="pdf-iframe" />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {confirmDeleteId && createPortal(
+        <div className="pdf-modal-overlay animate-fade-in" onClick={() => !deleting && setConfirmDeleteId(null)}>
+          <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-confirm-icon">
+              <AlertTriangle size={32} color="#ef4444" />
+            </div>
+            <h3>Excluir documento</h3>
+            <p>Tem certeza que deseja excluir <strong>{pdfs.find(p => p.id === confirmDeleteId)?.name}</strong>? Esta ação não pode ser desfeita.</p>
+            <div className="delete-confirm-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? <><span className="spinner" /> Excluindo...</> : <><Trash2 size={16} /> Excluir</>}
+              </button>
             </div>
           </div>
         </div>,
