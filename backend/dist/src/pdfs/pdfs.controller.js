@@ -56,12 +56,17 @@ const roles_decorator_1 = require("../auth/roles.decorator");
 const crypto_1 = require("crypto");
 const fs = __importStar(require("fs"));
 const prisma_service_1 = require("../prisma/prisma.service");
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME = 'application/pdf';
+const ALLOWED_EXT = '.pdf';
 let PdfsDownloadController = class PdfsDownloadController {
     serveFile(filename, res) {
-        const filePath = (0, path_1.join)(process.cwd(), 'uploads/pdfs', filename);
+        const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = (0, path_1.join)(process.cwd(), 'uploads/pdfs', safeName);
         if (fs.existsSync(filePath)) {
-            res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+            res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
             res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
             res.sendFile(filePath);
         }
         else {
@@ -87,43 +92,61 @@ let PdfsController = class PdfsController {
         this.prisma = prisma;
     }
     async uploadPdf(file, category) {
+        if (!file) {
+            throw new common_1.BadRequestException('Nenhum arquivo enviado.');
+        }
         const fileBuffer = fs.readFileSync(file.path);
-        const hash = (0, crypto_1.createHash)('md5').update(fileBuffer).digest('hex');
+        if (fileBuffer.slice(0, 4).toString() !== '%PDF') {
+            fs.unlinkSync(file.path);
+            throw new common_1.BadRequestException('O arquivo enviado não é um PDF válido.');
+        }
+        const hash = (0, crypto_1.createHash)('sha256').update(fileBuffer).digest('hex');
         const port = process.env.PORT ?? 3000;
+        const url = `http://localhost:${port}/pdfs/download/${file.filename}`;
         const pdf = await this.prisma.pdf.create({
             data: {
                 name: file.originalname,
                 hash,
-                url: `/pdfs/download/${file.filename}`,
-                category: category || "Produtos e tabelas"
-            }
+                url,
+                category: category || 'Produtos e tabelas',
+            },
         });
         return { message: 'Upload concluído', pdf };
     }
     async listPdfs() {
         const pdfs = await this.prisma.pdf.findMany({
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
         });
-        return pdfs.map(pdf => ({
+        return pdfs.map((pdf) => ({
             id: pdf.id,
             name: pdf.name,
             hash: pdf.hash,
             url_download: pdf.url,
-            category: pdf.category
+            category: pdf.category,
         }));
     }
     async renamePdf(id, body) {
+        if (!body.name || body.name.trim().length === 0) {
+            throw new common_1.BadRequestException('O nome não pode estar vazio.');
+        }
         const pdf = await this.prisma.pdf.update({
             where: { id },
-            data: { name: body.name },
+            data: { name: body.name.trim() },
         });
-        return { id: pdf.id, name: pdf.name, hash: pdf.hash, url_download: pdf.url, category: pdf.category };
+        return {
+            id: pdf.id,
+            name: pdf.name,
+            hash: pdf.hash,
+            url_download: pdf.url,
+            category: pdf.category,
+        };
     }
     async deletePdf(id) {
         const pdf = await this.prisma.pdf.findUnique({ where: { id } });
         if (pdf) {
             const filename = pdf.url.split('/').pop() || '';
-            const filePath = (0, path_1.join)(process.cwd(), 'uploads/pdfs', filename);
+            const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+            const filePath = (0, path_1.join)(process.cwd(), 'uploads/pdfs', safeName);
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
             }
@@ -137,13 +160,23 @@ __decorate([
     (0, common_1.Post)(),
     (0, roles_decorator_1.Roles)('admin'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        limits: { fileSize: MAX_FILE_SIZE },
         storage: (0, multer_1.diskStorage)({
             destination: './uploads/pdfs',
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null, uniqueSuffix + (0, path_1.extname)(file.originalname));
+            filename: (_req, file, cb) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+                cb(null, uniqueSuffix + ALLOWED_EXT);
+            },
+        }),
+        fileFilter: (_req, file, cb) => {
+            if (file.mimetype !== ALLOWED_MIME) {
+                return cb(new common_1.BadRequestException('Apenas arquivos PDF são permitidos.'), false);
             }
-        })
+            if ((0, path_1.extname)(file.originalname).toLowerCase() !== ALLOWED_EXT) {
+                return cb(new common_1.BadRequestException('Extensão de arquivo inválida. Use .pdf'), false);
+            }
+            cb(null, true);
+        },
     })),
     __param(0, (0, common_1.UploadedFile)()),
     __param(1, (0, common_1.Body)('category')),

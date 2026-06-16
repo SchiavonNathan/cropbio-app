@@ -17,9 +17,8 @@ export class AuthService implements OnModuleInit {
     });
 
     if (!existing) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin', salt);
-      
+      const hashedPassword = await bcrypt.hash('admin', 12);
+
       await this.prisma.user.create({
         data: {
           username: 'admin',

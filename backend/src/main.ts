@@ -5,31 +5,67 @@ import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // Security headers
-  app.use(helmet({
-    crossOriginResourcePolicy: false,
-    xFrameOptions: false, // Disable X-Frame-Options to allow iframing (CSP frameAncestors handles it)
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        frameAncestors: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+
+  // Trust proxy — needed for @nestjs/throttler to correctly read client IP
+  // behind reverse proxies (nginx, Cloudflare, etc.)
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // ── Security Headers (Helmet) ────────────────────────────────────────
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  app.use(
+    helmet({
+      // Deny framing from other origins (clickjacking protection)
+      frameguard: { action: 'sameorigin' },
+      // Prevent MIME type sniffing
+      noSniff: true,
+      // Force HTTPS (only enable in production)
+      hsts: process.env.NODE_ENV === 'production'
+        ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+        : false,
+      // Content Security Policy
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // needed for inline styles in React
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          connectSrc: ["'self'", frontendUrl],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'self'", frontendUrl],
+          formAction: ["'self'"],
+          upgradeInsecureRequests:
+            process.env.NODE_ENV === 'production' ? [] : null,
+        },
       },
-    },
-  }));
+      // Allow embedding PDFs in iframes from same origin
+      crossOriginResourcePolicy: { policy: 'same-site' },
+      // Disable x-powered-by header (hides Express/NestJS)
+      hidePoweredBy: true,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
 
-  // Enable CORS
-  app.enableCors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' });
+  // ── CORS ────────────────────────────────────────────────────────────
+  app.enableCors({
+    origin: frontendUrl,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+  });
 
-  // Global validation
+  // ── Global Validation Pipe ──────────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strips out properties that are not part of the DTO
-      forbidNonWhitelisted: true, // Throws an error if non-whitelisted properties are present
-      transform: true, // Automatically transform payloads to DTO instances
+      whitelist: true,            // Strip unknown properties
+      forbidNonWhitelisted: true, // Reject requests with unknown properties
+      transform: true,            // Auto-transform payloads to DTO types
+      stopAtFirstError: false,    // Return all errors at once
     }),
   );
 
   await app.listen(process.env.PORT ?? 3000);
 }
+
 bootstrap();

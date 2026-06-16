@@ -54,6 +54,7 @@ const USER_SELECT = {
     email: true,
     phone: true,
 };
+const BCRYPT_ROUNDS = 12;
 let UsersService = class UsersService {
     prisma;
     constructor(prisma) {
@@ -66,8 +67,7 @@ let UsersService = class UsersService {
         });
     }
     async create(data) {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(data.password, salt);
+        const hashedPassword = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
         return this.prisma.user.create({
             data: {
                 ...data,
@@ -79,8 +79,7 @@ let UsersService = class UsersService {
     async update(id, data) {
         const updateData = { ...data };
         if (data.password) {
-            const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(data.password, salt);
+            updateData.password = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
         }
         return this.prisma.user.update({
             where: { id },

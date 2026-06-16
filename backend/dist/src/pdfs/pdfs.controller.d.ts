@@ -9,10 +9,10 @@ export declare class PdfsController {
     uploadPdf(file: Express.Multer.File, category: string): Promise<{
         message: string;
         pdf: {
-            url: string;
             id: string;
             name: string;
             hash: string;
+            url: string;
             category: string;
             createdAt: Date;
             updatedAt: Date;

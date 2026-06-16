@@ -13,6 +13,8 @@ const USER_SELECT = {
   phone: true,
 };
 
+const BCRYPT_ROUNDS = 12;
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -25,8 +27,7 @@ export class UsersService {
   }
 
   async create(data: CreateUserDto) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(data.password, salt);
+    const hashedPassword = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
 
     return this.prisma.user.create({
       data: {
@@ -40,8 +41,7 @@ export class UsersService {
   async update(id: string, data: UpdateUserDto) {
     const updateData: any = { ...data };
     if (data.password) {
-      const salt = await bcrypt.genSalt(10);
-      updateData.password = await bcrypt.hash(data.password, salt);
+      updateData.password = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
     }
 
     return this.prisma.user.update({
@@ -55,3 +55,4 @@ export class UsersService {
     return this.prisma.user.delete({ where: { id } });
   }
 }
+
