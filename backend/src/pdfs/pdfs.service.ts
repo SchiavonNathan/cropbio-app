@@ -41,6 +41,7 @@ export class PdfsService implements OnModuleInit {
             name: file, // we don't have the original name anymore, so we use the disk filename
             hash,
             url,
+            subcategoryId: null,
           }
         });
         console.log(`[PdfsService] Arquivo restaurado para o banco de dados: ${file}`);

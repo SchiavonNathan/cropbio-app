@@ -72,10 +72,36 @@ export default function DashboardScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
-  const sections = CATEGORIES.map(cat => ({
-    title: cat,
-    data: pdfs.filter(p => (p.category || 'Produtos e tabelas') === cat)
-  })).filter(section => section.data.length > 0);
+  // Build sections: group by category > subcategory
+  // Each section title = "Categoria — Subcategoria" or just "Categoria" if no subcategory
+  const sections = (() => {
+    const result: { title: string; categoryTitle: string; isSubcatHeader: boolean; data: any[] }[] = [];
+
+    for (const cat of CATEGORIES) {
+      const catPdfs = pdfs.filter(p => (p.category || 'Produtos e tabelas') === cat);
+      if (catPdfs.length === 0) continue;
+
+      // Group by subcategoryName
+      const subMap = new Map<string, any[]>();
+      for (const pdf of catPdfs) {
+        const key = pdf.subcategoryName || '—';
+        if (!subMap.has(key)) subMap.set(key, []);
+        subMap.get(key)!.push(pdf);
+      }
+
+      const subKeys = Array.from(subMap.keys()).sort();
+      for (const subKey of subKeys) {
+        result.push({
+          title: subKey === '—' ? cat : `${cat} › ${subKey}`,
+          categoryTitle: cat,
+          isSubcatHeader: subKey !== '—',
+          data: subMap.get(subKey)!,
+        });
+      }
+    }
+
+    return result;
+  })();
 
   return (
     <View style={styles.container}>
@@ -110,8 +136,19 @@ export default function DashboardScreen({ navigation }: any) {
           sections={sections}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          renderSectionHeader={({ section: { title } }) => (
-            <Text style={styles.sectionHeader}>{title}</Text>
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeaderContainer}>
+              {section.isSubcatHeader ? (
+                <>
+                  <Text style={styles.sectionCategory}>{section.categoryTitle}</Text>
+                  <Text style={styles.sectionSubcat}>
+                    {section.title.split('›')[1]?.trim()}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.sectionHeader}>{section.title}</Text>
+              )}
+            </View>
           )}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -181,14 +218,29 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0A422D',
+  sectionHeaderContainer: {
     marginTop: 16,
     marginBottom: 8,
     backgroundColor: '#e5e7eb',
     paddingVertical: 4,
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0A422D',
+  },
+  sectionCategory: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  sectionSubcat: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0A422D',
+    marginTop: 2,
   },
   card: {
     flexDirection: 'row',

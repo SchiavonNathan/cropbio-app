@@ -11,14 +11,20 @@ export async function initDatabase() {
       hash TEXT NOT NULL,
       url TEXT NOT NULL,
       localUri TEXT,
-      category TEXT
+      category TEXT,
+      subcategoryId TEXT,
+      subcategoryName TEXT
     );
   `);
 
-  try {
-    await db.execAsync(`ALTER TABLE local_pdfs ADD COLUMN category TEXT;`);
-  } catch (e) {
-    // Ignore if column already exists
+  // Safe migrations — ignore errors if column already exists
+  const alterCols = [
+    'ALTER TABLE local_pdfs ADD COLUMN category TEXT;',
+    'ALTER TABLE local_pdfs ADD COLUMN subcategoryId TEXT;',
+    'ALTER TABLE local_pdfs ADD COLUMN subcategoryName TEXT;',
+  ];
+  for (const sql of alterCols) {
+    try { await db.execAsync(sql); } catch (_) { /* column exists */ }
   }
 }
 
@@ -27,18 +33,20 @@ export async function getLocalPdfs() {
   return await db.getAllAsync('SELECT * FROM local_pdfs ORDER BY name ASC');
 }
 
-export async function insertOrUpdatePdf(pdf: { id: string, name: string, hash: string, url: string, localUri: string, category: string }) {
+export async function insertOrUpdatePdf(pdf: { id: string, name: string, hash: string, url: string, localUri: string, category: string, subcategoryId?: string | null, subcategoryName?: string | null }) {
   const db = await SQLite.openDatabaseAsync('pdfs.db');
   await db.runAsync(
-    `INSERT INTO local_pdfs (id, name, hash, url, localUri, category) 
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO local_pdfs (id, name, hash, url, localUri, category, subcategoryId, subcategoryName) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET 
        name=excluded.name, 
        hash=excluded.hash, 
        url=excluded.url, 
        localUri=excluded.localUri,
-       category=excluded.category`,
-    pdf.id ?? null, pdf.name ?? null, pdf.hash ?? null, pdf.url ?? null, pdf.localUri ?? null, pdf.category ?? null
+       category=excluded.category,
+       subcategoryId=excluded.subcategoryId,
+       subcategoryName=excluded.subcategoryName`,
+    pdf.id ?? null, pdf.name ?? null, pdf.hash ?? null, pdf.url ?? null, pdf.localUri ?? null, pdf.category ?? null, pdf.subcategoryId ?? null, pdf.subcategoryName ?? null
   );
 }
 

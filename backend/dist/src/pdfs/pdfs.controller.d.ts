@@ -6,14 +6,22 @@ export declare class PdfsDownloadController {
 export declare class PdfsController {
     private readonly prisma;
     constructor(prisma: PrismaService);
-    uploadPdf(file: Express.Multer.File, category: string): Promise<{
+    uploadPdf(file: Express.Multer.File, category: string, subcategoryId: string): Promise<{
         message: string;
         pdf: {
+            subcategory: {
+                id: string;
+                name: string;
+                category: string;
+                createdAt: Date;
+            } | null;
+        } & {
+            url: string;
             id: string;
             name: string;
             hash: string;
-            url: string;
             category: string;
+            subcategoryId: string | null;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -24,15 +32,20 @@ export declare class PdfsController {
         hash: string;
         url_download: string;
         category: string;
+        subcategoryId: string | null;
+        subcategoryName: string | null;
     }[]>;
     renamePdf(id: string, body: {
-        name: string;
+        name?: string;
+        subcategoryId?: string;
     }): Promise<{
         id: string;
         name: string;
         hash: string;
         url_download: string;
         category: string;
+        subcategoryId: string | null;
+        subcategoryName: string | null;
     }>;
     deletePdf(id: string): Promise<{
         message: string;

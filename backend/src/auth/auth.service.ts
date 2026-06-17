@@ -12,21 +12,25 @@ export class AuthService implements OnModuleInit {
 
   // Garante que o admin padrão existe no banco na inicialização
   async onModuleInit() {
-    const existing = await this.prisma.user.findUnique({
-      where: { username: 'admin' },
-    });
-
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash('admin', 12);
-
-      await this.prisma.user.create({
-        data: {
-          username: 'admin',
-          password: hashedPassword,
-          role: 'admin',
-        },
+    try {
+      const existing = await this.prisma.user.findUnique({
+        where: { username: 'admin' },
       });
-      console.log('[AuthService] Usuário admin padrão criado no banco com senha criptografada.');
+
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash('admin', 12);
+        await this.prisma.user.create({
+          data: {
+            username: 'admin',
+            password: hashedPassword,
+            role: 'admin',
+          },
+        });
+        console.log('[AuthService] Usuário admin padrão criado no banco com senha criptografada.');
+      }
+    } catch (e) {
+      // Ignore unique constraint errors (admin already created by parallel init)
+      console.warn('[AuthService] Admin já existe ou erro de criação ignorado:', (e as Error).message);
     }
   }
 

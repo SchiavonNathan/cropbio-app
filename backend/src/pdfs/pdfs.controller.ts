@@ -79,9 +79,14 @@ export class PdfsController {
   async uploadPdf(
     @UploadedFile() file: Express.Multer.File,
     @Body('category') category: string,
+    @Body('subcategoryId') subcategoryId: string,
   ) {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo enviado.');
+    }
+    if (!subcategoryId) {
+      fs.unlinkSync(file.path);
+      throw new BadRequestException('A subcategoria é obrigatória.');
     }
 
     const fileBuffer = fs.readFileSync(file.path);
@@ -90,6 +95,13 @@ export class PdfsController {
     if (fileBuffer.slice(0, 4).toString() !== '%PDF') {
       fs.unlinkSync(file.path); // Remove the invalid file
       throw new BadRequestException('O arquivo enviado não é um PDF válido.');
+    }
+
+    // Verify subcategory exists and belongs to the category
+    const subcategory = await this.prisma.subcategory.findUnique({ where: { id: subcategoryId } });
+    if (!subcategory) {
+      fs.unlinkSync(file.path);
+      throw new BadRequestException('Subcategoria inválida.');
     }
 
     const hash = createHash('sha256').update(fileBuffer).digest('hex');
@@ -102,8 +114,10 @@ export class PdfsController {
         name: file.originalname,
         hash,
         url,
-        category: category || 'Produtos e tabelas',
+        category: subcategory.category,
+        subcategoryId,
       },
+      include: { subcategory: true },
     });
 
     return { message: 'Upload concluído', pdf };
@@ -113,6 +127,7 @@ export class PdfsController {
   async listPdfs() {
     const pdfs = await this.prisma.pdf.findMany({
       orderBy: { createdAt: 'desc' },
+      include: { subcategory: true },
     });
     return pdfs.map((pdf) => ({
       id: pdf.id,
@@ -120,18 +135,36 @@ export class PdfsController {
       hash: pdf.hash,
       url_download: pdf.url,
       category: pdf.category,
+      subcategoryId: pdf.subcategoryId,
+      subcategoryName: pdf.subcategory?.name ?? null,
     }));
   }
 
   @Patch(':id')
   @Roles('admin')
-  async renamePdf(@Param('id') id: string, @Body() body: { name: string }) {
-    if (!body.name || body.name.trim().length === 0) {
+  async renamePdf(@Param('id') id: string, @Body() body: { name?: string; subcategoryId?: string }) {
+    if (body.name !== undefined && body.name.trim().length === 0) {
       throw new BadRequestException('O nome não pode estar vazio.');
     }
+
+    const updateData: any = {};
+    if (body.name) updateData.name = body.name.trim();
+
+    if (body.subcategoryId !== undefined) {
+      if (body.subcategoryId === null || body.subcategoryId === '') {
+        updateData.subcategoryId = null;
+      } else {
+        const sub = await this.prisma.subcategory.findUnique({ where: { id: body.subcategoryId } });
+        if (!sub) throw new BadRequestException('Subcategoria inválida.');
+        updateData.subcategoryId = body.subcategoryId;
+        updateData.category = sub.category;
+      }
+    }
+
     const pdf = await this.prisma.pdf.update({
       where: { id },
-      data: { name: body.name.trim() },
+      data: updateData,
+      include: { subcategory: true },
     });
     return {
       id: pdf.id,
@@ -139,6 +172,8 @@ export class PdfsController {
       hash: pdf.hash,
       url_download: pdf.url,
       category: pdf.category,
+      subcategoryId: pdf.subcategoryId,
+      subcategoryName: pdf.subcategory?.name ?? null,
     };
   }
 

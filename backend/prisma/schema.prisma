@@ -9,14 +9,26 @@ datasource db {
   provider = "sqlite"
 }
 
-model Pdf {
+model Subcategory {
   id        String   @id @default(uuid())
   name      String
-  hash      String
-  url       String
-  category  String   @default("Produtos e tabelas")
+  category  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  pdfs      Pdf[]
+
+  @@unique([name, category])
+}
+
+model Pdf {
+  id            String       @id @default(uuid())
+  name          String
+  hash          String
+  url           String
+  category      String       @default("Produtos e tabelas")
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 model User {

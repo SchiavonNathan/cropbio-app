@@ -14,6 +14,7 @@ const auth_module_1 = require("./auth/auth.module");
 const pdfs_module_1 = require("./pdfs/pdfs.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const users_module_1 = require("./users/users.module");
+const subcategories_module_1 = require("./subcategories/subcategories.module");
 const throttler_1 = require("@nestjs/throttler");
 const core_1 = require("@nestjs/core");
 const config_1 = require("@nestjs/config");
@@ -31,7 +32,8 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             pdfs_module_1.PdfsModule,
             prisma_module_1.PrismaModule,
-            users_module_1.UsersModule
+            users_module_1.UsersModule,
+            subcategories_module_1.SubcategoriesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

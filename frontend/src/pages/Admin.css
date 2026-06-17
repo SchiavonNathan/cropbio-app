@@ -186,3 +186,166 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Label required ---- */
+.label-required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+/* ---- No subs hint ---- */
+.no-subs-hint {
+  background: var(--surface-2);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---- Subcategory Section ---- */
+.subcats-section {
+  margin-top: 40px;
+}
+
+.subcats-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.subcats-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.subcats-header p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Create form card */
+.subcat-create-card {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.subcat-create-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.subcat-create-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.subcat-create-form select,
+.subcat-create-form input {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* Groups grid */
+.subcats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.subcat-group-card {
+  padding: 20px 24px;
+}
+
+.subcat-group-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.subcat-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.subcat-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subcat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.subcat-item:hover {
+  background: var(--accent-subtle);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.subcat-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subcat-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subcat-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.subcat-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.subcat-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* re-use delete-confirm-modal from Dashboard.css — no duplication needed */
+

@@ -5,19 +5,28 @@ import Layout from '../components/Layout';
 import {
   FileText, Download, Eye, X, ExternalLink, Pencil,
   Check, XCircle, ChevronRight, FileSpreadsheet,
-  BookOpen, Award, ArrowLeft, Trash2, AlertTriangle
+  BookOpen, Award, ArrowLeft, Trash2, AlertTriangle, Folder,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 import './Dashboard.css';
 
+interface Subcategory {
+  id: string;
+  name: string;
+  category: string;
+  _count: { pdfs: number };
+}
+
 interface PdfMetadata {
   id: string;
   name: string;
   hash: string;
   url_download: string;
-  category?: string;
+  category: string;
+  subcategoryId: string | null;
+  subcategoryName: string | null;
 }
 
 const CATEGORIES = [
@@ -29,6 +38,7 @@ const CATEGORIES = [
 
 export default function Dashboard() {
   const [pdfs, setPdfs] = useState<PdfMetadata[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPdf, setSelectedPdf] = useState<PdfMetadata | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,21 +49,26 @@ export default function Dashboard() {
 
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const subParam = searchParams.get('sub'); // subcategoryId
   const navigate = useNavigate();
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
 
   useEffect(() => {
-    const fetchPdfs = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/pdfs');
-        setPdfs(response.data);
+        const [pdfsRes, subsRes] = await Promise.all([
+          api.get('/pdfs'),
+          api.get('/subcategories'),
+        ]);
+        setPdfs(pdfsRes.data);
+        setSubcategories(subsRes.data);
       } catch {
         toast.error('Erro ao carregar documentos.');
       } finally {
         setLoading(false);
       }
     };
-    fetchPdfs();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -116,13 +131,21 @@ export default function Dashboard() {
     }
   };
 
-  const filteredPdfs = categoryParam
-    ? pdfs.filter((p) => (p.category || 'Produtos e tabelas') === categoryParam)
-    : [];
-
+  // ---- Derived data ----
   const currentCategory = CATEGORIES.find((c) => c.key === categoryParam);
+  const currentSub = subcategories.find(s => s.id === subParam);
 
-  // ---- HOME VIEW (no category) ----
+  const subsInCategory = subcategories.filter(s => s.category === categoryParam);
+
+  const filteredPdfs = (() => {
+    if (!categoryParam) return [];
+    if (subParam) {
+      return pdfs.filter(p => p.subcategoryId === subParam);
+    }
+    return pdfs.filter(p => p.category === categoryParam);
+  })();
+
+  // ---- HOME VIEW ----
   if (!categoryParam) {
     return (
       <Layout>
@@ -139,12 +162,12 @@ export default function Dashboard() {
         ) : (
           <div className="category-grid animate-fade-in">
             {CATEGORIES.map(({ key, label, icon: Icon }) => {
-              const count = pdfs.filter((p) => (p.category || 'Produtos e tabelas') === key).length;
+              const count = pdfs.filter((p) => p.category === key).length;
               return (
                 <div
                   key={key}
                   className="category-card"
-                  onClick={() => navigate(`/dashboard?category=${key}`)}
+                  onClick={() => navigate(`/dashboard?category=${encodeURIComponent(key)}`)}
                 >
                   <div className="category-card-icon">
                     <Icon size={24} color="var(--accent)" />
@@ -163,17 +186,81 @@ export default function Dashboard() {
     );
   }
 
-  // ---- CATEGORY VIEW ----
+  // ---- SUBCATEGORY LIST VIEW (category selected, no sub yet) ----
+  if (categoryParam && !subParam) {
+    return (
+      <Layout>
+        <div className="category-view-header animate-fade-in">
+          <button className="btn btn-ghost btn-icon" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={18} />
+          </button>
+          <div className="breadcrumb">
+            <span>Início</span>
+            <ChevronRight size={14} />
+            <span className="breadcrumb-current">{currentCategory?.label || categoryParam}</span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner spinner-lg" />
+            <span>Carregando...</span>
+          </div>
+        ) : subsInCategory.length === 0 ? (
+          <div className="empty-state animate-fade-in">
+            <Folder size={48} color="var(--text-muted)" />
+            <h3>Nenhuma subcategoria encontrada</h3>
+            <p>O admin ainda não criou subcategorias para esta categoria.</p>
+          </div>
+        ) : (
+          <div className="category-grid animate-fade-in">
+            {subsInCategory.map((sub) => {
+              const count = pdfs.filter(p => p.subcategoryId === sub.id).length;
+              return (
+                <div
+                  key={sub.id}
+                  className="category-card"
+                  onClick={() => navigate(`/dashboard?category=${encodeURIComponent(categoryParam)}&sub=${sub.id}`)}
+                >
+                  <div className="category-card-icon">
+                    <Folder size={24} color="var(--accent)" />
+                  </div>
+                  <div className="category-card-info">
+                    <h3>{sub.name}</h3>
+                    <span>{count} {count === 1 ? 'documento' : 'documentos'}</span>
+                  </div>
+                  <ChevronRight size={18} className="category-card-arrow" />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Layout>
+    );
+  }
+
+  // ---- PDF LIST VIEW (category + subcategory selected) ----
   return (
     <Layout>
       <div className="category-view-header animate-fade-in">
-        <button className="btn btn-ghost btn-icon" onClick={() => navigate('/dashboard')}>
+        <button
+          className="btn btn-ghost btn-icon"
+          onClick={() => navigate(`/dashboard?category=${encodeURIComponent(categoryParam!)}`)}
+        >
           <ArrowLeft size={18} />
         </button>
         <div className="breadcrumb">
-          <span>Início</span>
+          <span
+            className="breadcrumb-link"
+            onClick={() => navigate('/dashboard')}
+          >Início</span>
           <ChevronRight size={14} />
-          <span className="breadcrumb-current">{currentCategory?.label || categoryParam}</span>
+          <span
+            className="breadcrumb-link"
+            onClick={() => navigate(`/dashboard?category=${encodeURIComponent(categoryParam!)}`)}
+          >{currentCategory?.label || categoryParam}</span>
+          <ChevronRight size={14} />
+          <span className="breadcrumb-current">{currentSub?.name || subParam}</span>
         </div>
       </div>
 
@@ -186,7 +273,7 @@ export default function Dashboard() {
         <div className="empty-state animate-fade-in">
           <FileText size={48} color="var(--text-muted)" />
           <h3>Nenhum documento encontrado</h3>
-          <p>Nenhum PDF cadastrado nesta categoria.</p>
+          <p>Nenhum PDF cadastrado nesta subcategoria.</p>
         </div>
       ) : (
         <div className="pdf-list animate-fade-in">
@@ -219,7 +306,7 @@ export default function Dashboard() {
               ) : (
                 <div className="pdf-item-info">
                   <div className="pdf-item-name">{pdf.name}</div>
-                  <div className="pdf-item-meta">{pdf.category || 'Produtos e tabelas'}</div>
+                  <div className="pdf-item-meta">{pdf.subcategoryName || pdf.category}</div>
                 </div>
               )}
 

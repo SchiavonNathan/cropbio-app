@@ -110,6 +110,15 @@
   font-weight: 600;
 }
 
+.breadcrumb-link {
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.breadcrumb-link:hover {
+  color: var(--accent);
+}
+
 /* ---- PDF LIST ---- */
 .pdf-list {
   display: flex;

@@ -75,6 +75,7 @@ let PdfsService = class PdfsService {
                         name: file,
                         hash,
                         url,
+                        subcategoryId: null,
                     }
                 });
                 console.log(`[PdfsService] Arquivo restaurado para o banco de dados: ${file}`);

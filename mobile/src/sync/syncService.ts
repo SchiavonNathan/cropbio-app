@@ -9,6 +9,8 @@ interface ApiPdf {
   hash: string;
   url_download: string;
   category?: string;
+  subcategoryId?: string | null;
+  subcategoryName?: string | null;
 }
 
 export async function syncPdfs() {
@@ -72,7 +74,9 @@ export async function syncPdfs() {
               hash: remote.hash,
               url: remote.url_download,
               localUri: downloadRes.uri,
-              category: remote.category || "Produtos e tabelas"
+              category: remote.category || "Produtos e tabelas",
+              subcategoryId: remote.subcategoryId ?? null,
+              subcategoryName: remote.subcategoryName ?? null,
             });
             console.log(`[SyncService] Sucesso: ${remote.name}`);
           }

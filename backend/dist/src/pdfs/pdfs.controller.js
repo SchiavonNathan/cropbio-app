@@ -91,14 +91,23 @@ let PdfsController = class PdfsController {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async uploadPdf(file, category) {
+    async uploadPdf(file, category, subcategoryId) {
         if (!file) {
             throw new common_1.BadRequestException('Nenhum arquivo enviado.');
+        }
+        if (!subcategoryId) {
+            fs.unlinkSync(file.path);
+            throw new common_1.BadRequestException('A subcategoria é obrigatória.');
         }
         const fileBuffer = fs.readFileSync(file.path);
         if (fileBuffer.slice(0, 4).toString() !== '%PDF') {
             fs.unlinkSync(file.path);
             throw new common_1.BadRequestException('O arquivo enviado não é um PDF válido.');
+        }
+        const subcategory = await this.prisma.subcategory.findUnique({ where: { id: subcategoryId } });
+        if (!subcategory) {
+            fs.unlinkSync(file.path);
+            throw new common_1.BadRequestException('Subcategoria inválida.');
         }
         const hash = (0, crypto_1.createHash)('sha256').update(fileBuffer).digest('hex');
         const port = process.env.PORT ?? 3000;
@@ -108,14 +117,17 @@ let PdfsController = class PdfsController {
                 name: file.originalname,
                 hash,
                 url,
-                category: category || 'Produtos e tabelas',
+                category: subcategory.category,
+                subcategoryId,
             },
+            include: { subcategory: true },
         });
         return { message: 'Upload concluído', pdf };
     }
     async listPdfs() {
         const pdfs = await this.prisma.pdf.findMany({
             orderBy: { createdAt: 'desc' },
+            include: { subcategory: true },
         });
         return pdfs.map((pdf) => ({
             id: pdf.id,
@@ -123,15 +135,33 @@ let PdfsController = class PdfsController {
             hash: pdf.hash,
             url_download: pdf.url,
             category: pdf.category,
+            subcategoryId: pdf.subcategoryId,
+            subcategoryName: pdf.subcategory?.name ?? null,
         }));
     }
     async renamePdf(id, body) {
-        if (!body.name || body.name.trim().length === 0) {
+        if (body.name !== undefined && body.name.trim().length === 0) {
             throw new common_1.BadRequestException('O nome não pode estar vazio.');
+        }
+        const updateData = {};
+        if (body.name)
+            updateData.name = body.name.trim();
+        if (body.subcategoryId !== undefined) {
+            if (body.subcategoryId === null || body.subcategoryId === '') {
+                updateData.subcategoryId = null;
+            }
+            else {
+                const sub = await this.prisma.subcategory.findUnique({ where: { id: body.subcategoryId } });
+                if (!sub)
+                    throw new common_1.BadRequestException('Subcategoria inválida.');
+                updateData.subcategoryId = body.subcategoryId;
+                updateData.category = sub.category;
+            }
         }
         const pdf = await this.prisma.pdf.update({
             where: { id },
-            data: { name: body.name.trim() },
+            data: updateData,
+            include: { subcategory: true },
         });
         return {
             id: pdf.id,
@@ -139,6 +169,8 @@ let PdfsController = class PdfsController {
             hash: pdf.hash,
             url_download: pdf.url,
             category: pdf.category,
+            subcategoryId: pdf.subcategoryId,
+            subcategoryName: pdf.subcategory?.name ?? null,
         };
     }
     async deletePdf(id) {
@@ -180,8 +212,9 @@ __decorate([
     })),
     __param(0, (0, common_1.UploadedFile)()),
     __param(1, (0, common_1.Body)('category')),
+    __param(2, (0, common_1.Body)('subcategoryId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], PdfsController.prototype, "uploadPdf", null);
 __decorate([
