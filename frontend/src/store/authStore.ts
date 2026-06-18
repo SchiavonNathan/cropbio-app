@@ -12,23 +12,24 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, remember: boolean) => void;
   logout: () => void;
 }
 
 const TOKEN_KEY = '@app-cavazin:token';
 const USER_KEY  = '@app-cavazin:user';
 
-/**
- * Use sessionStorage instead of localStorage:
- * - Survives page refresh (F5) ✅
- * - Cleared when browser tab/window is closed ✅ (better isolation)
- * - Not shared across tabs ✅
- * - Not accessible by scripts from other origins ✅
- */
-function loadFromSession<T>(key: string): T | null {
+function loadToken(): string | null {
+  return (
+    sessionStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem(TOKEN_KEY)
+  );
+}
+
+function loadUser<T>(key: string): T | null {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw =
+      sessionStorage.getItem(key) || localStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
@@ -37,19 +38,29 @@ function loadFromSession<T>(key: string): T | null {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: sessionStorage.getItem(TOKEN_KEY),
-  user: loadFromSession<User>(USER_KEY),
+  token: loadToken(),
+  user: loadUser<User>(USER_KEY),
 
-  login: (token, user) => {
-    sessionStorage.setItem(TOKEN_KEY, token);
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+  login: (token, user, remember) => {
+    if (remember) {
+      // Persist across browser sessions
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(USER_KEY);
+    } else {
+      // Only for the current tab session (cleared on close)
+      sessionStorage.setItem(TOKEN_KEY, token);
+      sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
     set({ token, user });
   },
 
   logout: () => {
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
-    // Also clear any leftover from old localStorage sessions
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     set({ token: null, user: null });

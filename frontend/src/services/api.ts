@@ -8,9 +8,11 @@ export const api = axios.create({
   timeout: 15_000, // 15 seconds — prevents requests from hanging indefinitely
 });
 
-// Attach JWT token from sessionStorage on every request
+// Attach JWT token from sessionStorage or localStorage on every request
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem(TOKEN_KEY);
+  const token =
+    sessionStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

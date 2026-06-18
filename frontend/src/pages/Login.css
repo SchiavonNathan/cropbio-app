@@ -98,16 +98,107 @@
   padding-left: 40px;
 }
 
+/* Eye toggle button */
+.input-with-icon-right input {
+  padding-right: 40px;
+}
+
+.input-eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color var(--transition);
+}
+
+.input-eye-btn:hover {
+  color: var(--text);
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
+/* Remember me checkbox */
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.login-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.login-remember span {
+  line-height: 1.4;
+}
+
+/* Lockout warning */
+.login-lockout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-md);
+  color: #ef4444;
+  font-size: 0.875rem;
+}
+
+.login-lockout strong {
+  font-weight: 700;
+}
+
+/* Attempts dots */
+.login-attempts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.login-attempt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background var(--transition);
+}
+
+.login-attempt-dot.used {
+  background: #ef4444;
+}
+
+.login-attempts-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+/* Submit button */
 .login-submit-btn {
   width: 100%;
   padding: 12px 24px;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 1rem;
   font-weight: 700;
   border-radius: var(--radius-md);
@@ -115,6 +206,11 @@
 
 .login-submit-btn:not(:disabled):hover {
   box-shadow: 0 6px 20px rgba(10, 66, 45, 0.32);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .login-footer {
