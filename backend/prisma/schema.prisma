@@ -13,6 +13,7 @@ model Subcategory {
   id        String   @id @default(uuid())
   name      String
   category  String
+  iconUrl   String?
   createdAt DateTime @default(now())
   pdfs      Pdf[]
 

@@ -21,6 +21,7 @@ interface Subcategory {
   id: string;
   name: string;
   category: string;
+  iconUrl?: string;
   _count: { pdfs: number };
 }
 
@@ -44,6 +45,7 @@ export default function ManagePage() {
   const [loadingSubs, setLoadingSubs] = useState(true);
   const [newSubName, setNewSubName] = useState('');
   const [newSubCategory, setNewSubCategory] = useState(CATEGORIES[0]);
+  const [newSubIcon, setNewSubIcon] = useState<File | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [editSubName, setEditSubName] = useState('');
@@ -92,9 +94,17 @@ export default function ManagePage() {
     if (!name) return;
     setCreatingNew(true);
     try {
-      const res = await api.post<Subcategory>('/subcategories', { name, category: newSubCategory });
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('category', newSubCategory);
+      if (newSubIcon) {
+        formData.append('icon', newSubIcon);
+      }
+
+      const res = await api.post<Subcategory>('/subcategories', formData);
       setSubcategories(prev => [...prev, { ...res.data, _count: { pdfs: 0 } }]);
       setNewSubName('');
+      setNewSubIcon(null);
       toast.success('Subcategoria criada!');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Erro ao criar subcategoria.');
@@ -228,6 +238,15 @@ export default function ManagePage() {
                 onChange={(e) => setNewSubName(e.target.value)}
                 maxLength={80}
               />
+              <div className="manage-icon-upload">
+                <input
+                  type="file"
+                  id="sub-icon-upload"
+                  accept="image/jpeg, image/png, image/webp"
+                  onChange={(e) => setNewSubIcon(e.target.files?.[0] || null)}
+                  title="Selecionar ícone"
+                />
+              </div>
               <button type="submit" className="btn btn-primary" disabled={!newSubName.trim() || creatingNew}>
                 {creatingNew ? <span className="spinner" /> : <><FolderPlus size={16} /> Criar</>}
               </button>
@@ -264,6 +283,9 @@ export default function ManagePage() {
                             <>
                               <div className="subcat-item-info">
                                 <span className="subcat-name">{sub.name}</span>
+                                {sub.iconUrl && (
+                                  <img src={sub.iconUrl} alt="Ícone" className="subcat-icon" />
+                                )}
                                 <span className="subcat-count">{sub._count.pdfs} PDF{sub._count.pdfs !== 1 ? 's' : ''}</span>
                               </div>
                               <div className="subcat-item-actions">

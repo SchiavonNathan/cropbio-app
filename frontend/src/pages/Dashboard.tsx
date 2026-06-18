@@ -16,6 +16,7 @@ interface Subcategory {
   id: string;
   name: string;
   category: string;
+  iconUrl?: string;
   _count: { pdfs: number };
 }
 
@@ -258,7 +259,11 @@ export default function Dashboard() {
                   onClick={() => navigate(`/dashboard?category=${encodeURIComponent(categoryParam)}&sub=${sub.id}`)}
                 >
                   <div className="category-card-icon">
-                    <Folder size={24} color="var(--accent)" />
+                    {sub.iconUrl ? (
+                      <img src={sub.iconUrl} alt="Ícone" className="dashboard-subcat-icon" />
+                    ) : (
+                      <Folder size={24} color="var(--accent)" />
+                    )}
                   </div>
                   <div className="category-card-info">
                     <h3>{sub.name}</h3>

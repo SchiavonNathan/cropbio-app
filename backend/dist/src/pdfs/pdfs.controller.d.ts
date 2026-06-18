@@ -14,6 +14,7 @@ export declare class PdfsController {
                 name: string;
                 category: string;
                 createdAt: Date;
+                iconUrl: string | null;
             } | null;
         } & {
             url: string;

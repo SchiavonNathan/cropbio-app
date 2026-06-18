@@ -61,6 +61,13 @@
   background: var(--accent-subtle-hover);
 }
 
+.dashboard-subcat-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 .category-card-info {
   flex: 1;
   min-width: 0;

@@ -6,9 +6,6 @@ const TOKEN_KEY = '@app-cavazin:token';
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 15_000, // 15 seconds — prevents requests from hanging indefinitely
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Attach JWT token from sessionStorage on every request
