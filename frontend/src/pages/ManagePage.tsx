@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Layout from '../components/Layout';
 import {
   FolderPlus, Pencil, Check, XCircle, Trash2, AlertTriangle,
-  FileText, FolderOpen, Layers, FileCog,
+  FileText, FolderOpen, Layers, FileCog, ImageIcon, X, Camera,
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'sonner';
@@ -46,11 +46,15 @@ export default function ManagePage() {
   const [newSubName, setNewSubName] = useState('');
   const [newSubCategory, setNewSubCategory] = useState(CATEGORIES[0]);
   const [newSubIcon, setNewSubIcon] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [editSubName, setEditSubName] = useState('');
   const [confirmDeleteSub, setConfirmDeleteSub] = useState<Subcategory | null>(null);
   const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [updatingIconId, setUpdatingIconId] = useState<string | null>(null);
+  const iconUpdateRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // ---- PDF state ----
   const [pdfs, setPdfs] = useState<PdfItem[]>([]);
@@ -87,6 +91,24 @@ export default function ManagePage() {
     fetchPdfs();
   }, []);
 
+  // ---- Icon preview ----
+  const handleIconChange = (file: File | null) => {
+    setNewSubIcon(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setIconPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setIconPreview(null);
+    }
+  };
+
+  const clearIcon = () => {
+    setNewSubIcon(null);
+    setIconPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   // ===== SUBCATEGORY HANDLERS =====
   const handleCreateSub = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,11 +122,10 @@ export default function ManagePage() {
       if (newSubIcon) {
         formData.append('icon', newSubIcon);
       }
-
       const res = await api.post<Subcategory>('/subcategories', formData);
       setSubcategories(prev => [...prev, { ...res.data, _count: { pdfs: 0 } }]);
       setNewSubName('');
-      setNewSubIcon(null);
+      clearIcon();
       toast.success('Subcategoria criada!');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Erro ao criar subcategoria.');
@@ -142,6 +163,23 @@ export default function ManagePage() {
     category: cat,
     items: subcategories.filter(s => s.category === cat),
   }));
+
+  const handleUpdateIcon = async (id: string, file: File) => {
+    setUpdatingIconId(id);
+    try {
+      const formData = new FormData();
+      formData.append('icon', file);
+      const res = await api.patch<Subcategory>(`/subcategories/${id}/icon`, formData);
+      setSubcategories(prev => prev.map(s => s.id === id ? { ...s, iconUrl: res.data.iconUrl } : s));
+      toast.success('Ícone atualizado!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Erro ao atualizar ícone.');
+    } finally {
+      setUpdatingIconId(null);
+      // Reset the file input
+      if (iconUpdateRefs.current[id]) iconUpdateRefs.current[id]!.value = '';
+    }
+  };
 
   // ===== PDF HANDLERS =====
   const confirmRenamePdf = async (id: string) => {
@@ -224,32 +262,68 @@ export default function ManagePage() {
       {/* ===== TAB: SUBCATEGORIES ===== */}
       {activeTab === 'subcategories' && (
         <div className="manage-content animate-fade-in">
+
           {/* Create new */}
           <div className="card manage-create-card">
-            <h3><FolderPlus size={16} color="var(--accent)" /> Nova Subcategoria</h3>
-            <form className="manage-create-form" onSubmit={handleCreateSub}>
-              <select value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)}>
-                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-              <input
-                type="text"
-                placeholder="Nome da subcategoria..."
-                value={newSubName}
-                onChange={(e) => setNewSubName(e.target.value)}
-                maxLength={80}
-              />
-              <div className="manage-icon-upload">
-                <input
-                  type="file"
-                  id="sub-icon-upload"
-                  accept="image/jpeg, image/png, image/webp"
-                  onChange={(e) => setNewSubIcon(e.target.files?.[0] || null)}
-                  title="Selecionar ícone"
-                />
+            <h3><FolderPlus size={18} color="var(--accent)" /> Nova Subcategoria</h3>
+            <form className="manage-create-form-v2" onSubmit={handleCreateSub}>
+
+              {/* Row 1: category + name */}
+              <div className="manage-create-row">
+                <div className="manage-field-group">
+                  <label className="manage-field-label">Categoria</label>
+                  <select value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)}>
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+                <div className="manage-field-group manage-field-grow">
+                  <label className="manage-field-label">Nome da subcategoria</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Sementes, Herbicidas..."
+                    value={newSubName}
+                    onChange={(e) => setNewSubName(e.target.value)}
+                    maxLength={80}
+                  />
+                </div>
               </div>
-              <button type="submit" className="btn btn-primary" disabled={!newSubName.trim() || creatingNew}>
-                {creatingNew ? <span className="spinner" /> : <><FolderPlus size={16} /> Criar</>}
-              </button>
+
+              {/* Row 2: icon + button */}
+              <div className="manage-create-row manage-create-row-bottom">
+                <div className="manage-icon-picker">
+                  <label className="manage-field-label">Ícone (opcional)</label>
+                  <div className="manage-icon-picker-inner">
+                    {iconPreview ? (
+                      <div className="manage-icon-preview-wrap">
+                        <img src={iconPreview} alt="Preview" className="manage-icon-preview" />
+                        <button type="button" className="manage-icon-clear" onClick={clearIcon} title="Remover ícone">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="manage-icon-placeholder" onClick={() => fileInputRef.current?.click()}>
+                        <ImageIcon size={22} color="var(--text-muted)" />
+                        <span>Clique para selecionar</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg, image/png, image/webp"
+                      onChange={(e) => handleIconChange(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary manage-create-btn"
+                  disabled={!newSubName.trim() || creatingNew}
+                >
+                  {creatingNew ? <span className="spinner" /> : <><FolderPlus size={16} /> Criar Subcategoria</>}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -257,18 +331,54 @@ export default function ManagePage() {
           {loadingSubs ? (
             <div className="loading-state"><div className="spinner spinner-lg" /><span>Carregando...</span></div>
           ) : (
-            <div className="subcats-grid">
+            <div className="subcats-sections">
               {groupedSubs.map(({ category: cat, items }) => (
-                <div key={cat} className="card subcat-group-card">
-                  <div className="subcat-group-title">{cat}</div>
+                <div key={cat} className="subcats-section">
+                  <div className="subcats-section-header">
+                    <span className="subcats-section-title">{cat}</span>
+                    <span className="subcats-section-count">{items.length} subcategoria{items.length !== 1 ? 's' : ''}</span>
+                  </div>
+
                   {items.length === 0 ? (
-                    <p className="subcat-empty">Nenhuma subcategoria.</p>
+                    <div className="subcat-empty-state">
+                      <FolderPlus size={28} color="var(--text-muted)" />
+                      <span>Nenhuma subcategoria criada ainda.</span>
+                    </div>
                   ) : (
-                    <ul className="subcat-list">
+                    <div className="subcats-cards">
                       {items.map(sub => (
-                        <li key={sub.id} className="subcat-item">
+                        <div key={sub.id} className="subcat-card">
+                          <div className="subcat-card-icon">
+                            {sub.iconUrl
+                              ? <img src={sub.iconUrl} alt="Ícone" className="subcat-card-img" />
+                              : <FolderOpen size={36} color="var(--accent)" />
+                            }
+                            {/* Overlay button to change icon */}
+                            <button
+                              className="subcat-card-icon-change"
+                              title="Alterar ícone"
+                              onClick={() => iconUpdateRefs.current[sub.id]?.click()}
+                              disabled={updatingIconId === sub.id}
+                            >
+                              {updatingIconId === sub.id
+                                ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                                : <Camera size={13} />
+                              }
+                            </button>
+                            <input
+                              type="file"
+                              accept="image/jpeg, image/png, image/webp"
+                              style={{ display: 'none' }}
+                              ref={el => { iconUpdateRefs.current[sub.id] = el; }}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleUpdateIcon(sub.id, file);
+                              }}
+                            />
+                          </div>
+
                           {editingSubId === sub.id ? (
-                            <div className="subcat-rename-form">
+                            <div className="subcat-card-rename">
                               <input
                                 className="rename-input"
                                 value={editSubName}
@@ -276,31 +386,37 @@ export default function ManagePage() {
                                 onKeyDown={e => { if (e.key === 'Enter') confirmRenameSub(sub.id); if (e.key === 'Escape') setEditingSubId(null); }}
                                 autoFocus
                               />
-                              <button className="btn btn-primary btn-icon btn-sm" onClick={() => confirmRenameSub(sub.id)}><Check size={14} /></button>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditingSubId(null)}><XCircle size={14} /></button>
+                              <button className="btn btn-primary btn-icon btn-sm" onClick={() => confirmRenameSub(sub.id)}><Check size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditingSubId(null)}><XCircle size={15} /></button>
                             </div>
                           ) : (
-                            <>
-                              <div className="subcat-item-info">
-                                <span className="subcat-name">{sub.name}</span>
-                                {sub.iconUrl && (
-                                  <img src={sub.iconUrl} alt="Ícone" className="subcat-icon" />
-                                )}
-                                <span className="subcat-count">{sub._count.pdfs} PDF{sub._count.pdfs !== 1 ? 's' : ''}</span>
-                              </div>
-                              <div className="subcat-item-actions">
-                                <button className="btn btn-ghost btn-icon btn-sm" title="Renomear" onClick={() => { setEditingSubId(sub.id); setEditSubName(sub.name); }}>
-                                  <Pencil size={14} />
-                                </button>
-                                <button className="btn btn-ghost btn-icon btn-sm btn-danger" title="Excluir" onClick={() => setConfirmDeleteSub(sub)}>
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </>
+                            <div className="subcat-card-info">
+                              <span className="subcat-card-name">{sub.name}</span>
+                              <span className="subcat-card-count">{sub._count.pdfs} PDF{sub._count.pdfs !== 1 ? 's' : ''}</span>
+                            </div>
                           )}
-                        </li>
+
+                          {editingSubId !== sub.id && (
+                            <div className="subcat-card-actions">
+                              <button
+                                className="btn btn-ghost btn-icon"
+                                title="Renomear"
+                                onClick={() => { setEditingSubId(sub.id); setEditSubName(sub.name); }}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-icon btn-danger"
+                                title="Excluir"
+                                onClick={() => setConfirmDeleteSub(sub)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
               ))}
@@ -312,7 +428,6 @@ export default function ManagePage() {
       {/* ===== TAB: PDFs ===== */}
       {activeTab === 'pdfs' && (
         <div className="manage-content animate-fade-in">
-          {/* Filter bar */}
           <div className="manage-pdf-toolbar">
             <select value={pdfFilterCategory} onChange={e => setPdfFilterCategory(e.target.value)}>
               <option value="">Todas as categorias</option>
@@ -383,7 +498,6 @@ export default function ManagePage() {
 
       {/* ===== MODALS ===== */}
 
-      {/* Delete subcategory */}
       {confirmDeleteSub && createPortal(
         <div className="pdf-modal-overlay animate-fade-in" onClick={() => !deletingSubId && setConfirmDeleteSub(null)}>
           <div className="delete-confirm-modal" onClick={e => e.stopPropagation()}>
@@ -408,7 +522,6 @@ export default function ManagePage() {
         document.body
       )}
 
-      {/* Delete PDF */}
       {confirmDeletePdfId && createPortal(
         <div className="pdf-modal-overlay animate-fade-in" onClick={() => !deletingPdf && setConfirmDeletePdfId(null)}>
           <div className="delete-confirm-modal" onClick={e => e.stopPropagation()}>
@@ -426,7 +539,6 @@ export default function ManagePage() {
         document.body
       )}
 
-      {/* Move PDF */}
       {movingPdf && createPortal(
         <div className="pdf-modal-overlay animate-fade-in" onClick={() => !moving && setMovingPdf(null)}>
           <div className="move-modal" onClick={e => e.stopPropagation()}>

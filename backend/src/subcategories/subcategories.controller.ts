@@ -132,6 +132,61 @@ export class SubcategoriesAdminController {
     return this.prisma.subcategory.update({ where: { id }, data: { name } });
   }
 
+  @Patch(':id/icon')
+  @Roles('admin')
+  @UseInterceptors(
+    FileInterceptor('icon', {
+      limits: { fileSize: MAX_ICON_SIZE },
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadDir = join(process.cwd(), 'uploads/icons');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          cb(null, './uploads/icons');
+        },
+        filename: (_req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          cb(null, uniqueSuffix + extname(file.originalname).toLowerCase());
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException('Formato de imagem inválido. Apenas JPG, PNG e WebP.') as any,
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async updateIcon(
+    @Param('id') id: string,
+    @UploadedFile() icon: Express.Multer.File,
+  ) {
+    if (!icon) throw new BadRequestException('Nenhuma imagem enviada.');
+
+    const sub = await this.prisma.subcategory.findUnique({ where: { id } });
+    if (!sub) {
+      fs.unlinkSync(icon.path);
+      throw new NotFoundException('Subcategoria não encontrada.');
+    }
+
+    // Remove old icon if exists
+    if (sub.iconUrl) {
+      const oldFilename = sub.iconUrl.split('/').pop() || '';
+      const safeName = oldFilename.replace(/[^a-zA-Z0-9._-]/g, '');
+      const oldPath = join(process.cwd(), 'uploads/icons', safeName);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const port = process.env.PORT ?? 3000;
+    const iconUrl = `http://localhost:${port}/subcategories/icon/${icon.filename}`;
+
+    return this.prisma.subcategory.update({ where: { id }, data: { iconUrl } });
+  }
+
   @Delete(':id')
   @Roles('admin')
   async remove(@Param('id') id: string) {
