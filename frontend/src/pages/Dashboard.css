@@ -304,6 +304,17 @@
   }
 }
 
+/* ---- No subs hint ---- */
+.no-subs-hint {
+  background: var(--surface-2);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ---- DANGER BUTTON ---- */
 .btn-danger {
   background: #ef4444 !important;
@@ -378,3 +389,71 @@
 .delete-confirm-actions .btn {
   min-width: 110px;
 }
+
+/* ---- MOVE MODAL ---- */
+.move-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.move-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.move-modal-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.move-modal-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.move-modal-subtitle strong {
+  color: var(--text);
+}
+
+.move-modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.move-modal-current {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 24px;
+}
+
+.move-modal-current strong {
+  color: var(--text);
+}
+
+.move-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.move-modal-actions .btn {
+  min-width: 110px;
+}
+

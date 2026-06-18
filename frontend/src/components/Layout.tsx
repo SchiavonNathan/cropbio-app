@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
   Home, FileSpreadsheet, BookOpen, Award, FileText,
-  Settings, Users, LogOut, Menu, X, Leaf
+  Settings, Users, LogOut, Menu, X, Leaf, LayoutDashboard,
 } from 'lucide-react';
 import './Layout.css';
 
@@ -132,9 +132,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span className="nav-section-label">Administração</span>
               <NavItem
                 icon={<Settings size={18} />}
-                label="Upload de PDFs"
+                label="Upload de PDF"
                 active={isActive('/admin')}
                 onClick={() => navigate('/admin')}
+              />
+              <NavItem
+                icon={<LayoutDashboard size={18} />}
+                label="Gerenciamento"
+                active={isActive('/manage')}
+                onClick={() => navigate('/manage')}
               />
               <NavItem
                 icon={<Users size={18} />}

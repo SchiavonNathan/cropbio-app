@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import UsersPage from './pages/UsersPage';
+import ManagePage from './pages/ManagePage';
 
 const ProtectedRoute = ({ children, requireAdmin }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { token, user } = useAuthStore();
@@ -44,6 +45,14 @@ function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <UsersPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/manage" 
+            element={
+              <ProtectedRoute requireAdmin>
+                <ManagePage />
               </ProtectedRoute>
             } 
           />

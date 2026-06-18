@@ -5,7 +5,7 @@ import Layout from '../components/Layout';
 import {
   FileText, Download, Eye, X, ExternalLink, Pencil,
   Check, XCircle, ChevronRight, FileSpreadsheet,
-  BookOpen, Award, ArrowLeft, Trash2, AlertTriangle, Folder,
+  BookOpen, Award, ArrowLeft, Trash2, AlertTriangle, Folder, FolderOpen,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -46,6 +46,12 @@ export default function Dashboard() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // ---- Move state ----
+  const [movingPdf, setMovingPdf] = useState<PdfMetadata | null>(null);
+  const [moveCategory, setMoveCategory] = useState('');
+  const [moveSubcategoryId, setMoveSubcategoryId] = useState('');
+  const [moving, setMoving] = useState(false);
 
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
@@ -128,6 +134,35 @@ export default function Dashboard() {
     } finally {
       setDeleting(false);
       setConfirmDeleteId(null);
+    }
+  };
+
+  const openMoveModal = (pdf: PdfMetadata, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMovingPdf(pdf);
+    setMoveCategory(pdf.category || CATEGORIES[0].key);
+    setMoveSubcategoryId(pdf.subcategoryId || '');
+  };
+
+  const subsForMoveCategory = subcategories.filter(s => s.category === moveCategory);
+
+  const handleMove = async () => {
+    if (!movingPdf || !moveSubcategoryId) return;
+    setMoving(true);
+    try {
+      const res = await api.patch(`/pdfs/${movingPdf.id}`, { subcategoryId: moveSubcategoryId });
+      setPdfs(prev => prev.map(p => p.id === movingPdf.id ? {
+        ...p,
+        category: res.data.category,
+        subcategoryId: res.data.subcategoryId,
+        subcategoryName: res.data.subcategoryName,
+      } : p));
+      toast.success('PDF movido com sucesso!');
+      setMovingPdf(null);
+    } catch {
+      toast.error('Erro ao mover o PDF.');
+    } finally {
+      setMoving(false);
     }
   };
 
@@ -322,6 +357,15 @@ export default function Dashboard() {
                   )}
                   {isAdmin && (
                     <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      title="Mover para outra subcategoria"
+                      onClick={(e) => openMoveModal(pdf, e)}
+                    >
+                      <FolderOpen size={16} />
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
                       className="btn btn-ghost btn-icon btn-sm btn-danger"
                       title="Excluir"
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(pdf.id); }}
@@ -395,6 +439,67 @@ export default function Dashboard() {
                 disabled={deleting}
               >
                 {deleting ? <><span className="spinner" /> Excluindo...</> : <><Trash2 size={16} /> Excluir</>}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {movingPdf && createPortal(
+        <div className="pdf-modal-overlay animate-fade-in" onClick={() => !moving && setMovingPdf(null)}>
+          <div className="move-modal" onClick={e => e.stopPropagation()}>
+            <div className="move-modal-header">
+              <FolderOpen size={20} color="var(--accent)" />
+              <h3>Mover documento</h3>
+            </div>
+            <p className="move-modal-subtitle">Selecione a nova localização para <strong>{movingPdf.name}</strong>.</p>
+
+            <div className="move-modal-fields">
+              <div className="input-group">
+                <label>Categoria</label>
+                <select
+                  value={moveCategory}
+                  onChange={e => { setMoveCategory(e.target.value); setMoveSubcategoryId(''); }}
+                >
+                  {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </div>
+
+              <div className="input-group">
+                <label>Subcategoria</label>
+                {subsForMoveCategory.length === 0 ? (
+                  <div className="no-subs-hint">Nenhuma subcategoria nesta categoria.</div>
+                ) : (
+                  <select
+                    value={moveSubcategoryId}
+                    onChange={e => setMoveSubcategoryId(e.target.value)}
+                  >
+                    <option value="">Selecione...</option>
+                    {subsForMoveCategory.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {movingPdf.subcategoryId && (
+              <div className="move-modal-current">
+                Localização atual: <strong>{movingPdf.category}</strong> › <strong>{movingPdf.subcategoryName}</strong>
+              </div>
+            )}
+
+            <div className="move-modal-actions">
+              <button className="btn btn-ghost" onClick={() => setMovingPdf(null)} disabled={moving}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleMove}
+                disabled={moving || !moveSubcategoryId || moveSubcategoryId === movingPdf.subcategoryId}
+              >
+                {moving ? <><span className="spinner" /> Movendo...</> : <><FolderOpen size={16} /> Mover</>}
               </button>
             </div>
           </div>
