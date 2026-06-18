@@ -206,13 +206,13 @@ export default function Dashboard() {
                   onClick={() => navigate(`/dashboard?category=${encodeURIComponent(key)}`)}
                 >
                   <div className="category-card-icon">
-                    <Icon size={24} color="var(--accent)" />
+                    <Icon size={34} color="var(--accent)" />
                   </div>
                   <div className="category-card-info">
                     <h3>{label}</h3>
                     <span>{count} {count === 1 ? 'documento' : 'documentos'}</span>
                   </div>
-                  <ChevronRight size={18} className="category-card-arrow" />
+                  <ChevronRight size={24} className="category-card-arrow" />
                 </div>
               );
             })}
@@ -262,14 +262,14 @@ export default function Dashboard() {
                     {sub.iconUrl ? (
                       <img src={sub.iconUrl} alt="Ícone" className="dashboard-subcat-icon" />
                     ) : (
-                      <Folder size={24} color="var(--accent)" />
+                      <Folder size={34} color="var(--accent)" />
                     )}
                   </div>
                   <div className="category-card-info">
                     <h3>{sub.name}</h3>
                     <span>{count} {count === 1 ? 'documento' : 'documentos'}</span>
                   </div>
-                  <ChevronRight size={18} className="category-card-arrow" />
+                  <ChevronRight size={24} className="category-card-arrow" />
                 </div>
               );
             })}
