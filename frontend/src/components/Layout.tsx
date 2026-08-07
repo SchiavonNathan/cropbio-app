@@ -3,8 +3,9 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
   Home, FileSpreadsheet, BookOpen, Award, FileText,
-  Settings, Users, LogOut, Menu, X, Leaf, LayoutDashboard,
+  Settings, Users, LogOut, Menu, X, LayoutDashboard,
 } from 'lucide-react';
+import cropbioImg from '../assets/cropbio.png';
 import './Layout.css';
 
 interface NavItemProps {
@@ -63,7 +64,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Menu size={22} />
         </button>
         <div className="topbar-brand">
-          <h2>Vitalforce</h2>
+          <img src={cropbioImg} alt="CropBio Logo" className="brand-logo-img" />
+          <h2>CropBio</h2>
         </div>
         <div style={{ width: 38 }} />
       </header>
@@ -78,10 +80,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon">
-            <Leaf size={18} />
+            <img src={cropbioImg} alt="CropBio Logo" className="brand-logo-img" />
           </div>
           <div className="sidebar-brand-text">
-            <h2>Vitalforce</h2>
+            <h2>CropBio</h2>
           </div>
           <button className="mobile-close-btn" onClick={() => setMobileOpen(false)}>
             <X size={20} />

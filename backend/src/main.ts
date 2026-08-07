@@ -11,7 +11,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   // ── Security Headers (Helmet) ────────────────────────────────────────
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
 
   app.use(
     helmet({
@@ -39,8 +39,8 @@ async function bootstrap() {
             process.env.NODE_ENV === 'production' ? [] : null,
         },
       },
-      // Allow embedding PDFs in iframes from same origin
-      crossOriginResourcePolicy: { policy: 'same-site' },
+      // Allow embedding/loading resources from any origin
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
       // Disable x-powered-by header (hides Express/NestJS)
       hidePoweredBy: true,
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
@@ -49,7 +49,7 @@ async function bootstrap() {
 
   // ── CORS ────────────────────────────────────────────────────────────
   app.enableCors({
-    origin: frontendUrl,
+    origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,

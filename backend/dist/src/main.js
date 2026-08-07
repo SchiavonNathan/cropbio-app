@@ -10,7 +10,7 @@ const helmet_1 = __importDefault(require("helmet"));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.getHttpAdapter().getInstance().set('trust proxy', 1);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     app.use((0, helmet_1.default)({
         frameguard: { action: 'sameorigin' },
         noSniff: true,
@@ -31,12 +31,12 @@ async function bootstrap() {
                 upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
             },
         },
-        crossOriginResourcePolicy: { policy: 'same-site' },
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
         hidePoweredBy: true,
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }));
     app.enableCors({
-        origin: frontendUrl,
+        origin: '*',
         methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: false,

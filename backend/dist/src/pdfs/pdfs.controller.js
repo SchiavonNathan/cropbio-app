@@ -91,7 +91,7 @@ let PdfsController = class PdfsController {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async uploadPdf(file, category, subcategoryId) {
+    async uploadPdf(file, subcategoryId) {
         if (!file) {
             throw new common_1.BadRequestException('Nenhum arquivo enviado.');
         }
@@ -149,6 +149,7 @@ let PdfsController = class PdfsController {
         if (body.subcategoryId !== undefined) {
             if (body.subcategoryId === null || body.subcategoryId === '') {
                 updateData.subcategoryId = null;
+                updateData.category = null;
             }
             else {
                 const sub = await this.prisma.subcategory.findUnique({ where: { id: body.subcategoryId } });
@@ -211,10 +212,9 @@ __decorate([
         },
     })),
     __param(0, (0, common_1.UploadedFile)()),
-    __param(1, (0, common_1.Body)('category')),
-    __param(2, (0, common_1.Body)('subcategoryId')),
+    __param(1, (0, common_1.Body)('subcategoryId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], PdfsController.prototype, "uploadPdf", null);
 __decorate([

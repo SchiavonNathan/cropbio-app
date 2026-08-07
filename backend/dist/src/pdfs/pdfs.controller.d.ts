@@ -6,7 +6,7 @@ export declare class PdfsDownloadController {
 export declare class PdfsController {
     private readonly prisma;
     constructor(prisma: PrismaService);
-    uploadPdf(file: Express.Multer.File, category: string, subcategoryId: string): Promise<{
+    uploadPdf(file: Express.Multer.File, subcategoryId: string): Promise<{
         message: string;
         pdf: {
             subcategory: {

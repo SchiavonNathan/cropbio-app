@@ -48,18 +48,19 @@
 .login-logo-wrapper {
   display: flex;
   justify-content: center;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
-.login-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(10, 66, 45, 0.25);
+.login-logo-img {
+  height: 110px;
+  max-width: 240px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(10, 66, 45, 0.08));
+  transition: transform var(--transition-fast);
+}
+
+.login-logo-img:hover {
+  transform: scale(1.03);
 }
 
 .login-header {

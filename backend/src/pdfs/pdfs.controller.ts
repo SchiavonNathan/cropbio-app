@@ -78,7 +78,6 @@ export class PdfsController {
   )
   async uploadPdf(
     @UploadedFile() file: Express.Multer.File,
-    @Body('category') category: string,
     @Body('subcategoryId') subcategoryId: string,
   ) {
     if (!file) {
@@ -153,6 +152,7 @@ export class PdfsController {
     if (body.subcategoryId !== undefined) {
       if (body.subcategoryId === null || body.subcategoryId === '') {
         updateData.subcategoryId = null;
+        updateData.category = null;
       } else {
         const sub = await this.prisma.subcategory.findUnique({ where: { id: body.subcategoryId } });
         if (!sub) throw new BadRequestException('Subcategoria inválida.');

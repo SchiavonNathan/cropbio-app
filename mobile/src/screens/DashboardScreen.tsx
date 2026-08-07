@@ -107,7 +107,7 @@ export default function DashboardScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcome}>Vitalforce</Text>
+          <Text style={styles.welcome}>CropBio</Text>
           <Text style={styles.subtitle}>Olá, {user?.username}</Text>
         </View>
         <View style={styles.headerActions}>
