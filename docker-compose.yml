@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: app_cavazin_backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:/app/data/dev.db
+      - JWT_SECRET=${JWT_SECRET:-change_this_secret_in_production_with_crypto_random_bytes}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-8h}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
+    container_name: app_cavazin_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+volumes:
+  backend_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
