@@ -60,4 +60,4 @@ COPY --from=builder /app/prisma.config.ts ./
 EXPOSE 3000
 
 # Push DB schema if new, then start production server
-CMD ["sh", "-c", "npx prisma db push --skip-generate && npm run start:prod"]
+CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
