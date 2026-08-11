@@ -86,7 +86,7 @@ export default function Login() {
         </div>
 
         <div className="login-header">
-          <p>Acesse o Sistema de Gestão de PDFs</p>
+          <p>Cropbio</p>
         </div>
 
         <form

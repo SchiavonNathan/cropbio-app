@@ -324,7 +324,11 @@ export default function Dashboard() {
               onClick={() => openViewer(pdf)}
             >
               <div className="pdf-item-icon">
-                <FileText size={22} color="var(--accent)" />
+                {pdf.name.toLowerCase().endsWith('.xlsx') ? (
+                  <FileSpreadsheet size={22} color="var(--accent)" />
+                ) : (
+                  <FileText size={22} color="var(--accent)" />
+                )}
               </div>
 
               {editingId === pdf.id ? (
@@ -399,7 +403,11 @@ export default function Dashboard() {
           <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pdf-modal-header">
               <div className="pdf-modal-title">
-                <FileText size={18} color="var(--primary)" />
+                {selectedPdf.name.toLowerCase().endsWith('.xlsx') ? (
+                  <FileSpreadsheet size={18} color="var(--primary)" />
+                ) : (
+                  <FileText size={18} color="var(--primary)" />
+                )}
                 <span>{selectedPdf.name}</span>
               </div>
               <div className="pdf-modal-actions">
@@ -415,7 +423,17 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="pdf-modal-body">
-              <iframe src={resolveApiUrl(selectedPdf.url_download)} title={selectedPdf.name} className="pdf-iframe" />
+              {selectedPdf.name.toLowerCase().endsWith('.xlsx') ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: '#64748b' }}>
+                  <FileSpreadsheet size={48} color="var(--accent)" />
+                  <p>Planilhas Excel não podem ser visualizadas diretamente no navegador.</p>
+                  <a href={resolveApiUrl(selectedPdf.url_download)} download className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                    <Download size={18} /> Baixar Planilha
+                  </a>
+                </div>
+              ) : (
+                <iframe src={resolveApiUrl(selectedPdf.url_download)} title={selectedPdf.name} className="pdf-iframe" />
+              )}
             </div>
           </div>
         </div>,

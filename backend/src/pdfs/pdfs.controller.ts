@@ -15,8 +15,11 @@ import * as fs from 'fs';
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_MIME = 'application/pdf';
-const ALLOWED_EXT = '.pdf';
+const ALLOWED_EXTS = ['.pdf', '.xlsx'];
+const MIME_TYPES = {
+  '.pdf': 'application/pdf',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
 
 // Rota pública de download/visualização — sem JWT guard
 @Controller('pdfs/download')
@@ -29,7 +32,8 @@ export class PdfsDownloadController {
 
     if (fs.existsSync(filePath)) {
       res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
-      res.setHeader('Content-Type', 'application/pdf');
+      const ext = extname(safeName).toLowerCase();
+      res.setHeader('Content-Type', MIME_TYPES[ext as keyof typeof MIME_TYPES] || 'application/octet-stream');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.sendFile(filePath);
     } else {
@@ -54,21 +58,23 @@ export class PdfsController {
         filename: (_req, file, cb) => {
           // Use only timestamp + random — do NOT use original name on disk
           const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          cb(null, uniqueSuffix + ALLOWED_EXT);
+          const ext = extname(file.originalname).toLowerCase();
+          cb(null, uniqueSuffix + ext);
         },
       }),
       fileFilter: (_req, file, cb) => {
-        // Validate MIME type reported by the client
-        if (file.mimetype !== ALLOWED_MIME) {
+        const ext = extname(file.originalname).toLowerCase();
+        
+        if (!ALLOWED_EXTS.includes(ext)) {
           return cb(
-            new BadRequestException('Apenas arquivos PDF são permitidos.') as any,
+            new BadRequestException('Extensão inválida. Use .pdf ou .xlsx') as any,
             false,
           );
         }
-        // Validate extension
-        if (extname(file.originalname).toLowerCase() !== ALLOWED_EXT) {
+
+        if (file.mimetype !== MIME_TYPES[ext as keyof typeof MIME_TYPES]) {
           return cb(
-            new BadRequestException('Extensão de arquivo inválida. Use .pdf') as any,
+            new BadRequestException('Tipo de arquivo não corresponde à extensão.') as any,
             false,
           );
         }
@@ -90,10 +96,16 @@ export class PdfsController {
 
     const fileBuffer = fs.readFileSync(file.path);
 
-    // Double-check magic bytes: PDF files start with "%PDF"
-    if (fileBuffer.slice(0, 4).toString() !== '%PDF') {
-      fs.unlinkSync(file.path); // Remove the invalid file
-      throw new BadRequestException('O arquivo enviado não é um PDF válido.');
+    const ext = extname(file.originalname).toLowerCase();
+    const magicBytes = fileBuffer.slice(0, 4).toString();
+
+    let isValidMagicByte = false;
+    if (ext === '.pdf' && magicBytes === '%PDF') isValidMagicByte = true;
+    if (ext === '.xlsx' && magicBytes === 'PK\x03\x04') isValidMagicByte = true; // Excel (ZIP)
+
+    if (!isValidMagicByte) {
+      fs.unlinkSync(file.path);
+      throw new BadRequestException('O arquivo enviado não tem formato válido ou está corrompido.');
     }
 
     // Verify subcategory exists and belongs to the category

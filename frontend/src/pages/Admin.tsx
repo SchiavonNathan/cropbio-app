@@ -112,12 +112,12 @@ export default function Admin() {
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
             >
-              <input type="file" accept=".pdf" id="file-upload" className="file-input-hidden" onChange={handleFileChange} />
+              <input type="file" accept=".pdf,.xlsx" id="file-upload" className="file-input-hidden" onChange={handleFileChange} />
               {!selectedFile ? (
                 <label htmlFor="file-upload" className="dropzone-label">
                   <div className="dropzone-icon"><UploadCloud size={32} color="var(--accent)" /></div>
                   <h3>Clique para selecionar ou arraste o arquivo</h3>
-                  <p>Somente arquivos no formato .PDF</p>
+                  <p>Somente arquivos no formato .PDF e .XLSX</p>
                 </label>
               ) : (
                 <div className="file-preview">
@@ -145,7 +145,7 @@ export default function Admin() {
         <div className="card tips-card">
           <h3><Info size={16} color="var(--accent)" /> Dicas de uso</h3>
           <ul className="tip-list">
-            <li className="tip-item"><span className="tip-bullet" /><span>Apenas arquivos <strong>.PDF</strong> são aceitos pelo sistema.</span></li>
+            <li className="tip-item"><span className="tip-bullet" /><span>Apenas arquivos <strong>.PDF</strong> e <strong>.XLSX</strong> são aceitos pelo sistema.</span></li>
             <li className="tip-item"><span className="tip-bullet" /><span>Escolha a <strong>categoria e subcategoria corretas</strong> antes de enviar.</span></li>
             <li className="tip-item"><span className="tip-bullet" /><span>Documentos enviados ficam disponíveis <strong>imediatamente</strong> no app mobile.</span></li>
             <li className="tip-item"><span className="tip-bullet" /><span>Gerencie subcategorias e PDFs existentes na aba <strong>Gerenciamento</strong>.</span></li>
