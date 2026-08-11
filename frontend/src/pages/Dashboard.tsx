@@ -7,7 +7,7 @@ import {
   Check, XCircle, ChevronRight, FileSpreadsheet,
   BookOpen, Award, ArrowLeft, Trash2, AlertTriangle, Folder, FolderOpen,
 } from 'lucide-react';
-import api from '../services/api';
+import { api, resolveApiUrl } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 import './Dashboard.css';
@@ -260,7 +260,7 @@ export default function Dashboard() {
                 >
                   <div className="category-card-icon">
                     {sub.iconUrl ? (
-                      <img src={sub.iconUrl} alt="Ícone" className="dashboard-subcat-icon" />
+                      <img src={resolveApiUrl(sub.iconUrl)} alt="Ícone" className="dashboard-subcat-icon" />
                     ) : (
                       <Folder size={34} color="var(--accent)" />
                     )}
@@ -379,7 +379,7 @@ export default function Dashboard() {
                     </button>
                   )}
                   <a
-                    href={pdf.url_download}
+                    href={resolveApiUrl(pdf.url_download)}
                     download
                     className="btn btn-outline btn-icon btn-sm"
                     title="Baixar"
@@ -403,10 +403,10 @@ export default function Dashboard() {
                 <span>{selectedPdf.name}</span>
               </div>
               <div className="pdf-modal-actions">
-                <a href={selectedPdf.url_download} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-icon btn-sm">
+                <a href={resolveApiUrl(selectedPdf.url_download)} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-icon btn-sm">
                   <ExternalLink size={16} />
                 </a>
-                <a href={selectedPdf.url_download} download className="btn btn-primary btn-icon btn-sm">
+                <a href={resolveApiUrl(selectedPdf.url_download)} download className="btn btn-primary btn-icon btn-sm">
                   <Download size={16} />
                 </a>
                 <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSelectedPdf(null)}>
@@ -415,7 +415,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="pdf-modal-body">
-              <iframe src={selectedPdf.url_download} title={selectedPdf.name} className="pdf-iframe" />
+              <iframe src={resolveApiUrl(selectedPdf.url_download)} title={selectedPdf.name} className="pdf-iframe" />
             </div>
           </div>
         </div>,

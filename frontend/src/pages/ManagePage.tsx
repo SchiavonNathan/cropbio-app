@@ -5,7 +5,7 @@ import {
   FolderPlus, Pencil, Check, XCircle, Trash2, AlertTriangle,
   FileText, FolderOpen, Layers, FileCog, ImageIcon, X, Camera,
 } from 'lucide-react';
-import api from '../services/api';
+import { api, resolveApiUrl } from '../services/api';
 import { toast } from 'sonner';
 import './Dashboard.css'; // shared modal + danger button styles
 import './ManagePage.css';
@@ -350,7 +350,7 @@ export default function ManagePage() {
                         <div key={sub.id} className="subcat-card">
                           <div className="subcat-card-icon">
                             {sub.iconUrl
-                              ? <img src={sub.iconUrl} alt="Ícone" className="subcat-card-img" />
+                              ? <img src={resolveApiUrl(sub.iconUrl)} alt="Ícone" className="subcat-card-img" />
                               : <FolderOpen size={36} color="var(--accent)" />
                             }
                             {/* Overlay button to change icon */}
