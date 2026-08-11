@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: app_cavazin_backend
+    container_name: app_cropbio_backend
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-3000}:3000"
@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
-    container_name: app_cavazin_frontend
+    container_name: app_cropbio_frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-80}:80"
