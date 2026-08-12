@@ -57,15 +57,19 @@ const crypto_1 = require("crypto");
 const fs = __importStar(require("fs"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME = 'application/pdf';
-const ALLOWED_EXT = '.pdf';
+const ALLOWED_EXTS = ['.pdf', '.xlsx'];
+const MIME_TYPES = {
+    '.pdf': 'application/pdf',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
 let PdfsDownloadController = class PdfsDownloadController {
     serveFile(filename, res) {
         const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = (0, path_1.join)(process.cwd(), 'uploads/pdfs', safeName);
         if (fs.existsSync(filePath)) {
             res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
-            res.setHeader('Content-Type', 'application/pdf');
+            const ext = (0, path_1.extname)(safeName).toLowerCase();
+            res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.sendFile(filePath);
         }
@@ -100,9 +104,16 @@ let PdfsController = class PdfsController {
             throw new common_1.BadRequestException('A subcategoria é obrigatória.');
         }
         const fileBuffer = fs.readFileSync(file.path);
-        if (fileBuffer.slice(0, 4).toString() !== '%PDF') {
+        const ext = (0, path_1.extname)(file.originalname).toLowerCase();
+        const magicBytes = fileBuffer.slice(0, 4).toString();
+        let isValidMagicByte = false;
+        if (ext === '.pdf' && magicBytes === '%PDF')
+            isValidMagicByte = true;
+        if (ext === '.xlsx' && magicBytes === 'PK\x03\x04')
+            isValidMagicByte = true;
+        if (!isValidMagicByte) {
             fs.unlinkSync(file.path);
-            throw new common_1.BadRequestException('O arquivo enviado não é um PDF válido.');
+            throw new common_1.BadRequestException('O arquivo enviado não tem formato válido ou está corrompido.');
         }
         const subcategory = await this.prisma.subcategory.findUnique({ where: { id: subcategoryId } });
         if (!subcategory) {
@@ -198,15 +209,17 @@ __decorate([
             destination: './uploads/pdfs',
             filename: (_req, file, cb) => {
                 const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-                cb(null, uniqueSuffix + ALLOWED_EXT);
+                const ext = (0, path_1.extname)(file.originalname).toLowerCase();
+                cb(null, uniqueSuffix + ext);
             },
         }),
         fileFilter: (_req, file, cb) => {
-            if (file.mimetype !== ALLOWED_MIME) {
-                return cb(new common_1.BadRequestException('Apenas arquivos PDF são permitidos.'), false);
+            const ext = (0, path_1.extname)(file.originalname).toLowerCase();
+            if (!ALLOWED_EXTS.includes(ext)) {
+                return cb(new common_1.BadRequestException('Extensão inválida. Use .pdf ou .xlsx'), false);
             }
-            if ((0, path_1.extname)(file.originalname).toLowerCase() !== ALLOWED_EXT) {
-                return cb(new common_1.BadRequestException('Extensão de arquivo inválida. Use .pdf'), false);
+            if (file.mimetype !== MIME_TYPES[ext]) {
+                return cb(new common_1.BadRequestException('Tipo de arquivo não corresponde à extensão.'), false);
             }
             cb(null, true);
         },
