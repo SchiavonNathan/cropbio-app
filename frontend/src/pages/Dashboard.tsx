@@ -67,12 +67,14 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [pdfsRes, subsRes] = await Promise.all([
+        const [pdfsRes, subsRes, hiddenRes] = await Promise.all([
           api.get('/pdfs'),
           api.get('/subcategories'),
+          api.get('/categories/hidden').catch(() => ({ data: [] })),
         ]);
         setPdfs(pdfsRes.data);
         setSubcategories(subsRes.data);
+        setHiddenCategories(hiddenRes.data);
       } catch {
         toast.error('Erro ao carregar documentos.');
       } finally {
