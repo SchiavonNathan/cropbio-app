@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "CropBio",
-    "slug": "mobile",
+    "slug": "cropbio-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.nathanschiavon.mobile"
+      "package": "com.nathanschiavon.cropbio"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -26,6 +26,12 @@
     "plugins": [
       "expo-sqlite",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c373b68a-16e0-48c1-ad0c-96d2a759a77d"
+      }
+    },
+    "owner": "nathanschiavon"
   }
 }
