@@ -42,6 +42,7 @@ const CATEGORIES = [
 export default function Dashboard() {
   const [pdfs, setPdfs] = useState<PdfMetadata[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPdf, setSelectedPdf] = useState<PdfMetadata | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -200,7 +201,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="main-category-grid animate-fade-in">
-            {CATEGORIES.map(({ key, label, icon: Icon }) => {
+            {CATEGORIES.filter(c => !hiddenCategories.includes(c.key)).map(({ key, label, icon: Icon }) => {
               const count = pdfs.filter((p) => p.category === key).length;
               return (
                 <div
