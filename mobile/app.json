@@ -4,24 +4,27 @@
     "slug": "cropbio-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/cropbio.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/cropbio.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "primaryColor": "#0A422D",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/cropbio.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.nathanschiavon.cropbio"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/cropbio.png"
     },
     "plugins": [
       "expo-sqlite",
